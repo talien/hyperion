@@ -27,6 +27,13 @@ averagecounter = {
             }
 }
 
+tail =  {
+        'name': 'tail',
+        'typeName' : 'tail',
+        'options': {
+            'backlog':'20'
+        }
+}
 
 
 rewrite = {
@@ -49,12 +56,12 @@ filternode = {
 }
 
 def create(data):
-    req = urllib2.Request('http://localhost:8080/create')
+    req = urllib2.Request('http://localhost:8080/rest/create')
     req.add_header('Content-Type', 'application/json')
     response = urllib2.urlopen(req, json.dumps(data))
 
 def connect(fromNode, toNode):
-    response = urllib2.urlopen(urllib2.Request('http://localhost:8080/join/%s/%s' % (fromNode, toNode), ""))
+    response = urllib2.urlopen(urllib2.Request('http://localhost:8080/rest/join/%s/%s' % (fromNode, toNode), ""))
 
 create(parser)
 create(printer)
@@ -62,9 +69,11 @@ create(counter)
 create(averagecounter)
 create(rewrite)
 create(filternode)
+create(tail)
 
 connect("parser", "rewrite")
 connect("rewrite", "filter")
 connect("filter", "printer")
 connect("rewrite", "counter")
+connect("rewrite","tail")
 
