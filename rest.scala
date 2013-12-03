@@ -18,43 +18,55 @@ import DefaultJsonProtocol._
 import spray.routing.directives.CachingDirectives._
 import spray.httpx.SprayJsonSupport._
 
-
 package hyperion {
 	object PipeOptionsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 	  implicit val pipeOptionsFormat = jsonFormat3(PipeOptions)
 	}
 	
+	object MessageJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+	  implicit val messageFormat = jsonFormat1(Message.apply)
+	}
+		
 	object HyperionREST {
-	  def start(implicit system: ActorSystem, pipeManager: ActorRef, interface : String, port: Int) = {
-	    val myListener = system.actorOf(Props(new HyperionHttp(pipeManager)), name = "hyperion-http") 
+	  def start(implicit system: ActorSystem, pipeManager: ActorRef, interface : String, port: Int, staticDirectory: String) = {
+	    val myListener = system.actorOf(Props(new HyperionHttp(pipeManager, staticDirectory)), name = "hyperion-http") 
 	    IO(Http) ! Http.Bind(myListener, interface = interface, port = port)
         println("REST interface initialized")
 	  }
 	}
 	
-	class HyperionHttp(val pipeCreator: ActorRef) extends HttpServiceActor with ActorLogging {
-	   import PipeOptionsJsonProtocol._
+	class HyperionHttp(val pipeCreator: ActorRef, val staticDirectory: String) extends HttpServiceActor with ActorLogging {
+	   
 	   implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
 	   
 	   def getCounter(name: String) =
 	   {
 	     Await.result(pipeCreator ? CounterQuery(name), timeout.duration).asInstanceOf[Integer]
 	   }
+	   
+	   def getTail(name: String) =
+	   {
+	     Await.result(pipeCreator ? TailQuery(name), timeout.duration).asInstanceOf[List[Message]]
+	   }
 	  
 	   def receive = runRoute {
 	    
-	    path("ping") {
-	      get {
-	        complete("PONG")
-	      }
-	    } ~
-	    path("counter" / Segment) { name =>
+	    path("rest" / "counter" / Segment) { name =>
 	      get {
 	        val result = getCounter(name)
 	        complete(result.toString)
 	      }
 	    } ~
-	    path("shutdown") {
+	    path("rest" / "tail" / Segment) { name =>
+	      get {
+	        import MessageJsonProtocol._
+	        respondWithMediaType(`application/json`) {
+	        	val result = getTail(name)
+	        	complete (result)
+	        }
+	      }
+	    } ~
+	    path("rest" / "shutdown") {
 	      get { ctx =>
 	        ctx.complete {
 	           context.system.shutdown()
@@ -63,7 +75,8 @@ package hyperion {
 	        
 	      }
 	    } ~ 
-	    path("create") {
+	    path("rest" / "create") {
+	      import PipeOptionsJsonProtocol._
 	      post {
 	        entity(as[PipeOptions]) {
 	          pipeoptions => {
@@ -74,25 +87,19 @@ package hyperion {
 	        }
 	      }
 	    } ~ 
-	    path("join" / Segment / Segment) { (from, to) =>
+	    path("rest" / "join" / Segment / Segment) { (from, to) =>
 	      (get|post) {
 	        pipeCreator ! Join(from, to)
 	        println(from, to)
 	        complete("hello")
 	      }
+	    } ~
+	    pathPrefix("html") {
+	      get {
+	    	  getFromDirectory(staticDirectory)
+	      }
 	    }
-	    
-	     
+	        
 	  }
-	  
-	  lazy val index = HttpResponse(
-	    entity = HttpEntity(`text/html`,
-	      <html>
-        <body>
-          It works!
-        </body>
-      </html>.toString()
-	    )
-	  )
 	}
 }
