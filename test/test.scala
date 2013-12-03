@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent.Await
 
-class TestCase extends FlatSpec {
+class TestMessage extends FlatSpec {
     it should "be able to parse a single line" in {
         val line = "<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD"
         val result = parseMessage(line)
@@ -40,7 +40,7 @@ class TestCase extends FlatSpec {
     }
 }
 
-class TestActorCase (_system: ActorSystem) extends TestKit(_system) with ImplicitSender
+class TestPipeCase (_system: ActorSystem) extends TestKit(_system) with ImplicitSender
 with WordSpecLike with MustMatchers with BeforeAndAfterAll {
  
 	def this() = this(ActorSystem("MySpec"))
