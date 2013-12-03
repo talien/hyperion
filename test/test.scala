@@ -55,10 +55,10 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	     val probe1 = TestProbe()
 	     val probe2 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("MESSAGE","kakukk","almafa")))
-	     val expected = LogMessage.withMessage("almafa")
+	     val expected = Message.withMessage("almafa")
 	     actor ! AddActor(probe1.ref)
 	     actor ! AddActor(probe2.ref)
-	     actor ! LogMessage.withMessage("kakukk")
+	     actor ! Message.withMessage("kakukk")
 	     probe1.expectMsg(100 millis, expected)
 	     probe2.expectMsg(100 millis, expected)
 	     
@@ -69,8 +69,8 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	     val probe1 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("AAA","kakukk","almafa")))
 	     actor ! AddActor(probe1.ref)
-	     actor ! LogMessage.withMessage("kakukk")
-	     probe1.expectMsg(100 millis, LogMessage.withMessage("kakukk"))
+	     actor ! Message.withMessage("kakukk")
+	     probe1.expectMsg(100 millis, Message.withMessage("kakukk"))
 	  }
 	}
 	"MessageCounter" must {
@@ -85,7 +85,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  
 	  "respond with one if a message has arrived" in {
 	     val actor = system.actorOf(Props( new MessageCounter))
-	     actor ! LogMessage.withMessage("kakukk")
+	     actor ! Message.withMessage("kakukk")
 	     val future = actor ? Query
 	     val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
 	     assert(result == 1)
@@ -93,7 +93,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  
 	  "reset counter if Reset message got" in {
 	     val actor = system.actorOf(Props( new MessageCounter))
-	     actor ! LogMessage.withMessage("kakukk")
+	     actor ! Message.withMessage("kakukk")
 	     actor ! Reset
 	     val future = actor ? Query
 	     val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
@@ -105,7 +105,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	   implicit val timeout = Timeout(100 millis)
 	   "not count anything if field is not present" in {
 	     val actor = system.actorOf(Props( new FieldValueCounter("AAA","kakukk")))
-	     actor ! LogMessage.withMessage("kakukk")
+	     actor ! Message.withMessage("kakukk")
 	     val future = actor ? Query
 	     val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
 	     assert(result == 0)
@@ -113,7 +113,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	   
 	   "count field is matches" in {
 	     val actor = system.actorOf(Props( new FieldValueCounter("MESSAGE","kakukk")))
-	     actor ! LogMessage.withMessage("kakukk")
+	     actor ! Message.withMessage("kakukk")
 	     val future = actor ? Query
 	     val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
 	     assert(result == 1)
@@ -121,7 +121,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	   
 	   "not count field is not matches, but present" in {
 	     val actor = system.actorOf(Props( new FieldValueCounter("MESSAGE","kakukk")))
-	     actor ! LogMessage.withMessage("almafa")
+	     actor ! Message.withMessage("almafa")
 	     val future = actor ? Query
 	     val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
 	     assert(result == 0)

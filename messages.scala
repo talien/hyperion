@@ -2,17 +2,18 @@ import com.github.nscala_time.time.Imports._
 import scala.util.Try
 
 package hyperion {
-    case class LogMessage(nvpairs: Map[String, String])
+    case class Message(nvpairs: Map[String, String])
 	{
-	  def set(name: String, value: String) = LogMessage(nvpairs.updated(name, value))
+	  def set(name: String, value: String) = Message(nvpairs.updated(name, value))
 	  
 	  def withMessage(value: String) = set("MESSAGE", value)
 	  
 	  def apply(name: String) = nvpairs(name)
 	}
 	
-	object LogMessage {
-      def empty =  LogMessage(Map[String, String]().empty)
+	object Message {
+	  
+      def empty = Message(Map[String, String]().empty)
       
       def withMessage(value:String) = empty.withMessage(value)
     }

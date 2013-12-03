@@ -29,7 +29,7 @@ package hyperion {
 	   
 	   def process : PartialFunction[Any, Unit]
 	   
-	   def propagateMessage(message: LogMessage) =
+	   def propagateMessage(message: Message) =
 	     if (!next.isEmpty)
 	     {
 	    	 next.foreach( actor =>
@@ -42,7 +42,7 @@ package hyperion {
 	{
 	   def process = 
 	   {
-	     case LogMessage(data) => println(data("MESSAGE"))
+	     case Message(data) => println(data("MESSAGE"))
 	   }
 	}
 	
@@ -50,8 +50,8 @@ package hyperion {
 	{
 	  def process =
 	  {
-	    case LogMessage(data) =>
-	      if (data.contains(name) && data(name).matches(value)) propagateMessage(LogMessage(data))
+	    case Message(data) =>
+	      if (data.contains(name) && data(name).matches(value)) propagateMessage(Message(data))
 	  }
 	}
 	
@@ -59,10 +59,10 @@ package hyperion {
 	{
 	  def process =
 	  {
-	    case LogMessage(data) =>
+	    case Message(data) =>
 	      if (data.contains(name)) propagateMessage(
-	        LogMessage(data.updated(name, data(name) replaceAll(regexp, value) ) )
-	      ) else propagateMessage(LogMessage(data))
+	        Message(data.updated(name, data(name) replaceAll(regexp, value) ) )
+	      ) else propagateMessage(Message(data))
 	  }
 	}
 	
@@ -70,7 +70,7 @@ package hyperion {
 	{
 	  var counter = 0
 	  def process = {
-	    case LogMessage(data) =>
+	    case Message(data) =>
 	      count(data)
 	    case Reset =>
 	      counter = 0
@@ -137,7 +137,7 @@ package hyperion {
 	   def parse(message: String) =
 	   {
 	     val data = parseMessage(message)
-	     propagateMessage(LogMessage(data))
+	     propagateMessage(Message(data))
 	   }
 	
 	}
