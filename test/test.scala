@@ -142,7 +142,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  "after one message and one tick, average should one" in {
 	    val counter = system.actorOf(Props( new MessageCounter))
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 10)))
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
 	    averageCounter ! Tick
 	    val result = Await.result(averageCounter ? Query, timeout.duration).asInstanceOf[Integer]
 	    assert(result == 1)
@@ -153,9 +153,9 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  "after one message per tick, average should one" in {
 	    val counter = system.actorOf(Props( new MessageCounter))
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 10)))
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
 	    averageCounter ! Tick
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
 	    averageCounter ! Tick
 	    val result = Await.result(averageCounter ? Query, timeout.duration).asInstanceOf[Integer]
 	    assert(result == 1)
@@ -166,17 +166,17 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  "should only keep backlogsizenumber of items" in {
 	    val counter = system.actorOf(Props( new MessageCounter))
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 2)))
-	    counter ! LogMessage.empty
-	    counter ! LogMessage.empty
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
+	    counter ! Message.empty
+	    counter ! Message.empty
 	    Thread.sleep(10)
 	    averageCounter ! Tick
 	    Thread.sleep(10)
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
 	    Thread.sleep(10)
 	    averageCounter ! Tick
 	    Thread.sleep(10)
-	    counter ! LogMessage.empty
+	    counter ! Message.empty
 	    Thread.sleep(10)
 	    averageCounter ! Tick
 	    Thread.sleep(10)
