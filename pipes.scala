@@ -125,6 +125,14 @@ package hyperion {
 	  override def postStop = cancellable.asInstanceOf[akka.actor.Cancellable].cancel
 	}
 	
+	class Tail(backlogSize : Int) extends Pipe {
+	   var messageList = List[Message]()
+	   def process = {
+	     case msg: Message => messageList = msg :: (messageList take (backlogSize - 1)) 
+	     case Query => sender ! messageList
+	   }
+	}
+	
 	class Parser extends Pipe
 	{
 	

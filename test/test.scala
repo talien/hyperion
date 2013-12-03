@@ -186,5 +186,29 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	    counter ! PoisonPill
 	  }
 	}
+
+	"Tail" must {
+	  implicit val timeout = Timeout(1000 millis)
+	  "return empty list when no message arrived" in {
+	    val tail = system.actorOf(Props( new Tail(1)))
+	    val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+	    assert(result == List[Message]())
+	  }
+
+	  "return one element if one message arrived" in {
+	    val tail = system.actorOf(Props( new Tail(1)))
+	    tail ! Message.empty
+	    val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+	    assert(result == List[Message](Message.empty))
+	  }
+
+	  "return at most backlogsize elements" in {
+	    val tail = system.actorOf(Props( new Tail(1)))
+	    tail ! Message.empty
+	    tail ! Message.empty
+	    val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+	    assert(result == List[Message](Message.empty))
+	  }
+	}
 	
 }

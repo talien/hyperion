@@ -12,6 +12,7 @@ package hyperion {
 	case class Create(options: PipeOptions)
 	case class Join(from : String, to :String)
 	case class CounterQuery(counterName: String)
+	case class TailQuery(tailName : String)
 	
 	trait HyperionPathResolver {
 	  val pipePrefix = "pipe_"
@@ -48,6 +49,10 @@ package hyperion {
 	           val matchExpression = options.options("matchexpr")
 	           system.actorOf(Props(new Filter(fieldName, matchExpression)), nameFromOptions(options))
 	       }
+	       case "tail" => {
+	           val backlogSize : Int = options.options("backlog").toInt
+	           system.actorOf(Props(new Tail(backlogSize)), nameFromOptions(options))
+	       }
 	         
 	     } 
 	   }
@@ -69,6 +74,13 @@ package hyperion {
 	       {
 	         val counter = context.system.actorFor(pathForPipe(name))
 	         val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[Integer]
+	         sender ! result
+	       }
+	       
+	     case TailQuery(name) =>
+	       {
+	         val counter = context.system.actorFor(pathForPipe(name))
+	         val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[List[Message]]
 	         sender ! result
 	       }
 	   }
