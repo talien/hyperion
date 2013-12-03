@@ -5,6 +5,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable.ArrayBuffer
 import akka.pattern.{ ask, pipe }
 
 package hyperion {
@@ -17,11 +18,11 @@ package hyperion {
 	
 	abstract class Pipe extends Actor 
 	{
-	   var next = List[ActorRef]();
+	   val next = ArrayBuffer[ActorRef]()
 	   
 	   def receiveControl : PartialFunction[Any, Unit] = {
 	     case AddActor(nextActor) =>
-	       next = nextActor :: next
+	       next += nextActor
 	   }
 	   
 	   def receive = receiveControl orElse process
