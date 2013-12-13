@@ -3,7 +3,9 @@ import json, urllib2
 parser = {
         'name': 'parser',
         'typeName': 'source',
-        'options': {}
+        'options': {
+            'port':'1514'
+         } 
 }
 
 printer = {

@@ -150,14 +150,14 @@ package hyperion {
 	
 	}
 	
-	class ReceiverActor(parser: ActorRef) extends Actor
+	class ReceiverActor(parser: ActorRef, port : Int) extends Actor
 	{
 	
 	   val state = IO.IterateeRef.Map.async[IO.Handle]()(context.dispatcher)
 	   val LF = ByteString("\n")
 	   
 	   override def preStart {
-	        IOManager(context.system) listen new InetSocketAddress(1514)
+	        IOManager(context.system) listen new InetSocketAddress(port)
 	   }
 	
 	   def receive = 

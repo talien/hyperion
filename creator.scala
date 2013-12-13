@@ -28,8 +28,9 @@ package hyperion {
 	     options.typeName match {
 	       case "printer" => system.actorOf(Props(new Printer), nameFromOptions(options))
 	       case "source" => { 
+               val port : Int = options.options("port").toInt
 	           val parser = system.actorOf(Props(new Parser), nameFromOptions(options))
-	           system.actorOf(Props(new ReceiverActor(parser)))
+	           system.actorOf(Props(new ReceiverActor(parser, port)))
 	       }
 	       case "counter" => system.actorOf(Props(new MessageCounter), nameFromOptions(options))
 	       case "rewrite" => {
