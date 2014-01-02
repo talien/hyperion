@@ -30,6 +30,6 @@ object Hyperion extends App
     println("Hyperion starting up")
     val system = ActorSystem("hyperion", ConfigFactory.load(customConf))
     val pipeManager = system.actorOf(Props(new PipeCreator), "creator")
-    HyperionREST.start(system, pipeManager, "localhost", 8080, "frontend")
+    HyperionREST.start(system, pipeManager, "0.0.0.0", 8080, "frontend")
     println("Hyperion started")
 }

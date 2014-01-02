@@ -31,6 +31,16 @@ package hyperion {
       import PipeOptionsJsonProtocol._
       implicit val nodeFormat = jsonFormat4(NodeProperty)
     }
+
+    object ConnectionJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+      implicit val connFormat = jsonFormat2(Connection)
+    }
+     
+    object ConfigJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+      import NodePropertyJsonProtocol._
+      import ConnectionJsonProtocol._
+      implicit val configFormat = jsonFormat2(Config)
+    }
 		
 	object HyperionREST {
 	  def start(implicit system: ActorSystem, pipeManager: ActorRef, interface : String, port: Int, staticDirectory: String) = {
@@ -81,7 +91,6 @@ package hyperion {
 	      }
 	    } ~ 
 	    path("rest" / "create") {
-	      //import PipeOptionsJsonProtocol._
           import NodePropertyJsonProtocol._
 	      post {
 	        entity(as[NodeProperty]) {
@@ -96,16 +105,27 @@ package hyperion {
 	    } ~ 
 	    path("rest" / "join" / Segment / Segment) { (from, to) =>
 	      (get|post) {
+            Registry.connect(from, to)
 	        pipeCreator ! Join(from, to)
 	        println(from, to)
 	        complete("hello")
 	      }
 	    } ~
+        path("rest" / "config")
+        {
+          import ConfigJsonProtocol._
+          get {
+             respondWithMediaType(`application/json`) {
+                 complete(Registry.config)
+             }
+          }
+        } ~
 	    pathPrefix("html") {
 	      get {
 	    	  getFromDirectory(staticDirectory)
 	      }
-	    }
+	    } 
+
 	        
 	  }
 	}
