@@ -26,6 +26,11 @@ package hyperion {
 	object MessageJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 	  implicit val messageFormat = jsonFormat1(Message.apply)
 	}
+
+    object NodePropertyJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+      import PipeOptionsJsonProtocol._
+      implicit val nodeFormat = jsonFormat4(NodeProperty)
+    }
 		
 	object HyperionREST {
 	  def start(implicit system: ActorSystem, pipeManager: ActorRef, interface : String, port: Int, staticDirectory: String) = {
@@ -76,13 +81,15 @@ package hyperion {
 	      }
 	    } ~ 
 	    path("rest" / "create") {
-	      import PipeOptionsJsonProtocol._
+	      //import PipeOptionsJsonProtocol._
+          import NodePropertyJsonProtocol._
 	      post {
-	        entity(as[PipeOptions]) {
-	          pipeoptions => {
-			    pipeCreator ! Create(pipeoptions)
-			    println(pipeoptions)
-			    complete("Hello")
+	        entity(as[NodeProperty]) {
+	          node => {
+                Registry.add(node)
+			    pipeCreator ! Create(node.content)
+			    println(node)
+			    complete("OK")
 	          }
 	        }
 	      }
