@@ -210,5 +210,40 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	    assert(result == List[Message](Message.empty))
 	  }
 	}
+
+    "FieldStats" must {
+      implicit val timeout = Timeout(1000 millis)
+      "return empty map when no message arrived" in {
+        val stats = system.actorOf(Props(new FieldStatistics("test")))
+        val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String,Integer]]
+        assert(result == Map[String,Integer]())
+      }
+
+      "return empty map when non-matching message arrived" in
+      {
+        val stats = system.actorOf(Props(new FieldStatistics("test")))
+        stats ! Message.withMessage("almafa")
+        val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String,Integer]]
+        assert(result == Map[String,Integer]())
+      }
+     "return filled map when matching message arrived" in
+      {
+        val stats = system.actorOf(Props(new FieldStatistics("MESSAGE")))
+        stats ! Message.withMessage("almafa")
+        val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String,Integer]]
+        assert(result == Map[String,Integer]( "almafa" -> 1))
+
+      }
+     "return filled map when two matching messages arrived" in
+      {
+        val stats = system.actorOf(Props(new FieldStatistics("MESSAGE")))
+        stats ! Message.withMessage("almafa")
+        stats ! Message.withMessage("almafa")
+        val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String,Integer]]
+        assert(result == Map[String,Integer]( "almafa" -> 2))
+
+      }
+
+    }
 	
 }

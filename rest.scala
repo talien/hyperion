@@ -19,6 +19,7 @@ import spray.routing.directives.CachingDirectives._
 import spray.httpx.SprayJsonSupport._
 
 package hyperion {
+
 	object PipeOptionsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 	  implicit val pipeOptionsFormat = jsonFormat3(PipeOptions)
 	}
@@ -56,37 +57,60 @@ package hyperion {
 	   
 	   def getCounter(name: String) =
 	   {
-	     Await.result(pipeCreator ? CounterQuery(name), timeout.duration).asInstanceOf[Integer]
+         Await.result(pipeCreator ? CounterQuery(name), timeout.duration).asInstanceOf[Int]
 	   }
 	   
 	   def getTail(name: String) =
 	   {
-	     Await.result(pipeCreator ? TailQuery(name), timeout.duration).asInstanceOf[List[Message]]
+         pipeCreator ? TailQuery(name)
 	   }
+
+       def getStats(name : String) =
+       {
+         pipeCreator ? StatsQuery(name)
+       }
 	  
 	   def receive = runRoute {
 	    
 	    path("rest" / "counter" / Segment) { name =>
 	      get {
-	        val result = getCounter(name)
-	        complete(result.toString)
+            import DefaultJsonProtocol._
+            respondWithMediaType(`application/json`) {
+              complete {
+                val result = getCounter(name)
+	            result.toString
+              }
+            }
+	      }
+	    } ~
+        path("rest" / "stats" / Segment) { name =>
+	      get {
+            import DefaultJsonProtocol._
+            respondWithMediaType(`application/json`) {
+              complete {
+                val result = getStats(name).mapTo[Map[String, Int]]
+                result
+              }
+            }
 	      }
 	    } ~
 	    path("rest" / "tail" / Segment) { name =>
 	      get {
 	        import MessageJsonProtocol._
 	        respondWithMediaType(`application/json`) {
-	        	val result = getTail(name)
-	        	complete (result)
+   	        	complete  {
+                   val result = getTail(name).mapTo[List[Message]]
+                   result 
+                }
 	        }
 	      }
 	    } ~
 	    path("rest" / "shutdown") {
-	      get { ctx =>
-	        ctx.complete {
-	           context.system.shutdown()
-	           "Stopped"
-	        }
+	      get { 
+            complete {
+               context.system.shutdown()
+               "Stopped"
+            }
 	        
 	      }
 	    } ~ 
@@ -95,8 +119,7 @@ package hyperion {
 	      post {
 	        entity(as[NodeProperty]) {
 	          node => {
-                Registry.add(node)
-			    pipeCreator ! Create(node.content)
+			    pipeCreator ! Create(node)
 			    println(node)
 			    complete("OK")
 	          }
@@ -105,7 +128,6 @@ package hyperion {
 	    } ~ 
 	    path("rest" / "join" / Segment / Segment) { (from, to) =>
 	      (get|post) {
-            Registry.connect(from, to)
 	        pipeCreator ! Join(from, to)
 	        println(from, to)
 	        complete("hello")
@@ -116,7 +138,9 @@ package hyperion {
           import ConfigJsonProtocol._
           get {
              respondWithMediaType(`application/json`) {
-                 complete(Registry.config)
+                 complete{ 
+                     (pipeCreator ? QueryConfig).mapTo[Config]
+                 }
              }
           }
         } ~

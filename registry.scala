@@ -10,6 +10,8 @@ package hyperion {
         val connections : scala.collection.mutable.MutableList[Connection] = scala.collection.mutable.MutableList[Connection]();
         def add(node : NodeProperty) = nodes.update(node.id, node)
 
+        def hasNode(id: String) = nodes.contains(id)
+
         def connect(from: String, to: String) = connections += Connection(from, to)
 
         def getNodesAsList = nodes.values.toList

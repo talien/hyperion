@@ -94,6 +94,23 @@ package hyperion {
 	    if (data.contains(name) && data(name).matches(value)) counter = counter + 1
 	  }
 	}
+
+    class FieldStatistics(name : String) extends Pipe
+    {
+      val stats : scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map[String, Int]()
+      def process = 
+      {
+          case Message(data) =>
+            if (data.contains(name))
+            {
+               val value = stats.getOrElse(data(name),0)
+               stats.update(data(name), value + 1)
+            }
+          case Query => {
+            sender ! stats.toMap
+          }
+      }
+    }
 	
 	class AverageCounter(counter: ActorRef, tick: FiniteDuration, backlogsize: Int) extends Actor
 	{

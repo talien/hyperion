@@ -22,7 +22,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  implicit val timeout = Timeout(1000 millis)
 	  "be able to create and query Tail objects" in {
 	    val pipeManager = system.actorOf(Props(new PipeCreator), "creator")
-	    val options = PipeOptions("tail","tail",Map("backlog" -> "1"))
+	    val options = NodeProperty("almafa",10,10,PipeOptions("tail","tail",Map("backlog" -> "1")))
 	    pipeManager ! Create(options)
 	    system.actorFor("akka://hyperion/user/pipe_tail") ! Message.empty
 	    val result = Await.result(pipeManager ? TailQuery("tail"), timeout.duration).asInstanceOf[List[Message]]

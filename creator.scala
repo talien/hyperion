@@ -9,10 +9,13 @@ import akka.pattern.{ ask, pipe }
 package hyperion {
 
 	case class PipeOptions(name: String, typeName: String, options: Map[String, String])
-	case class Create(options: PipeOptions)
+	case class Create(options: NodeProperty)
 	case class Join(from : String, to :String)
 	case class CounterQuery(counterName: String)
 	case class TailQuery(tailName : String)
+    case class StatsQuery(tailName : String)
+    case class StatisticItem(value : String, count: Integer)
+    case class QueryConfig
 	
 	trait HyperionPathResolver {
 	  val pipePrefix = "pipe_"
@@ -54,6 +57,10 @@ package hyperion {
 	           val backlogSize : Int = options.options("backlog").toInt
 	           system.actorOf(Props(new Tail(backlogSize)), nameFromOptions(options))
 	       }
+           case "stats" => {
+               val fieldName = options.options("fieldname")
+               system.actorOf(Props(new FieldStatistics(fieldName)), nameFromOptions(options))
+           }
 	         
 	     } 
 	   }
@@ -62,11 +69,20 @@ package hyperion {
 	class PipeCreator extends Actor with HyperionPathResolver {
 	   
 	   implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
+
+       def create(node : NodeProperty) = {
+          if (!Registry.hasNode(node.id))
+          {
+             PipeFactory.construct(node.content, context.system)
+          }
+          Registry.add(node)
+       }
 	  
 	   def receive = {
-	     case Create(options) => PipeFactory.construct(options, context.system)
-	     case Join(from, to) =>
+	     case Create(node) => create(node)
+         case Join(from, to) =>
 	       {
+             Registry.connect(from, to)
 	         val fromActor = context.system.actorFor(pathForPipe(from))
 	         val toActor = context.system.actorFor(pathForPipe(to))
 	         fromActor ! AddActor(toActor)
@@ -84,6 +100,15 @@ package hyperion {
 	         val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[List[Message]]
 	         sender ! result
 	       }
+
+         case StatsQuery(name) =>
+           {
+             val counter = context.system.actorFor(pathForPipe(name))
+             val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
+             sender ! result
+           }
+         case QueryConfig =>
+             sender ! Registry.config
 	   }
 	}
 	
