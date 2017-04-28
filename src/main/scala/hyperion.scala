@@ -4,7 +4,7 @@ import hyperion._
 
 object Hyperion extends App
 {
-     val customConf = ConfigFactory.parseString("""
+     /*val customConf = ConfigFactory.parseString("""
      akka.actor {
          default-dispatcher {
               executor = "thread-pool-executor"
@@ -19,16 +19,17 @@ object Hyperion extends App
               }
              throughput = 1000
          }
-     }
-     akka.actor.default-mailbox {
+     }"""
+     """akka.actor.default-mailbox {
     	mailbox-type = "akka.dispatch.BoundedMailbox"
         mailbox-capacity = 100
-        mailbox-push-timeout-time = 10s  
+        mailbox-push-timeout-time = 0s  
      }
-     """)
+     """)*/
 
     println("Hyperion starting up")
-    val system = ActorSystem("hyperion", ConfigFactory.load(customConf))
+    //val system = ActorSystem("hyperion", ConfigFactory.load(customConf))
+    val system = ActorSystem("hyperion")
     val pipeManager = system.actorOf(Props(new PipeCreator), "creator")
     HyperionREST.start(system, pipeManager, "0.0.0.0", 8080, "frontend")
     println("Hyperion started")

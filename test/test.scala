@@ -56,8 +56,8 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	     val probe2 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("MESSAGE","kakukk","almafa")))
 	     val expected = Message.withMessage("almafa")
-	     actor ! AddActor(probe1.ref)
-	     actor ! AddActor(probe2.ref)
+	     actor ! AddActor(system.actorSelection(probe1.ref.path))
+	     actor ! AddActor(system.actorSelection(probe2.ref.path))
 	     actor ! Message.withMessage("kakukk")
 	     probe1.expectMsg(100 millis, expected)
 	     probe2.expectMsg(100 millis, expected)
@@ -68,7 +68,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  {
 	     val probe1 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("AAA","kakukk","almafa")))
-	     actor ! AddActor(probe1.ref)
+	     actor ! AddActor(system.actorSelection(probe1.ref.path))
 	     actor ! Message.withMessage("kakukk")
 	     probe1.expectMsg(100 millis, Message.withMessage("kakukk"))
 	  }
@@ -131,7 +131,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	"AverageCounter" must {
 	  implicit val timeout = Timeout(1000 millis)
 	  "return zero when no message present" in {
-	    val counter = system.actorOf(Props( new MessageCounter))
+	    val counter = system.actorSelection(system.actorOf(Props( new MessageCounter)).path)
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 100 millis, 10)))
 	    val result = Await.result(averageCounter ? Query, timeout.duration).asInstanceOf[Integer]
 	    assert(result == 0)
@@ -140,7 +140,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  }
 	  
 	  "after one message and one tick, average should one" in {
-	    val counter = system.actorOf(Props( new MessageCounter))
+      val counter = system.actorSelection(system.actorOf(Props( new MessageCounter)).path)
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 10)))
 	    counter ! Message.empty
 	    averageCounter ! Tick
@@ -151,7 +151,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  }
 	  
 	  "after one message per tick, average should one" in {
-	    val counter = system.actorOf(Props( new MessageCounter))
+      val counter = system.actorSelection(system.actorOf(Props( new MessageCounter)).path)
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 10)))
 	    counter ! Message.empty
 	    averageCounter ! Tick
@@ -164,7 +164,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  }
 	  
 	  "should only keep backlogsizenumber of items" in {
-	    val counter = system.actorOf(Props( new MessageCounter))
+      val counter = system.actorSelection(system.actorOf(Props( new MessageCounter)).path)
 	    val averageCounter = system.actorOf(Props( new AverageCounter(counter, 10000 millis, 2)))
 	    counter ! Message.empty
 	    counter ! Message.empty

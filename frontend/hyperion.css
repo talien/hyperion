@@ -1,0 +1,75 @@
+.node {
+    background-color:#88F;
+    border-radius:10px; 
+    border-width:10px; 
+    width:100px;
+    height:40px;
+    text-align: center;
+    position: absolute;
+    padding-top: 10px;
+    font-weight: bold;
+}
+
+.node:hover {
+    background-color:#AAF;
+}
+
+.dashboard-item {
+    background-color:#DDD;
+    border-radius:3px;
+    border-width:3px;
+    padding: 10px 10px 10px 10px;
+    font-weight: bold;
+}
+
+.message {
+    background-color:#AAF;
+    border-radius:3px;
+    border-width:3px;
+    margin: 3px;
+}
+
+.dashboard {
+    background-color:#EEE;
+    width: 20%;
+    position: absolute;
+    left:80%;
+}
+
+.canvas {
+    position: absolute;
+    left:20%;
+    background-color:#EEEEEE;
+    width:60%;
+    height:800px;
+}
+
+.menu {
+    position: absolute;
+    width:20%;
+
+}
+
+.btn-hyperion {
+    width: 80%;
+    margin: 10px 10px 10px 10px;
+    padding-left: 10px;
+    background-color: #FFF;
+}
+
+.btn-hyperion:hover {
+    background-color: #EEE;
+}
+
+.properties {
+    margin: 30px 30px 30px 30px;
+    font-weight: bold;
+}
+
+.hyperion-control {
+    width: 60%;
+}
+
+.capitalize {
+   text-transform: capitalize;
+}

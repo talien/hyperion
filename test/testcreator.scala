@@ -24,7 +24,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	    val pipeManager = system.actorOf(Props(new PipeCreator), "creator")
 	    val options = NodeProperty("almafa",10,10,PipeOptions("tail","tail",Map("backlog" -> "1")))
 	    pipeManager ! Create(options)
-	    system.actorFor("akka://hyperion/user/pipe_tail") ! Message.empty
+	    system.actorSelection("akka://hyperion/user/pipe_tail") ! Message.empty
 	    val result = Await.result(pipeManager ? TailQuery("tail"), timeout.duration).asInstanceOf[List[Message]]
 	    assert(result == List[Message](Message.empty))
 	  }

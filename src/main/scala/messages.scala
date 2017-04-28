@@ -30,7 +30,9 @@ package hyperion {
 	   val hostregexp = "([0-9A-Za-z.-_]*) (.*)".r
 	   val programregexp = "([^ \\[]*)(\\[[^\\]]+\\])*:* (.*)".r
 	
-	   def apply(message: String) = parsePrio(message)
+	   def apply(message: String) = {
+			 parsePrio(message)
+		 }
 	   
 	   def parsePrio(message: String) =
 	   {

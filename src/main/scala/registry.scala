@@ -14,6 +14,8 @@ package hyperion {
 
         def connect(from: String, to: String) = connections += Connection(from, to)
 
+        def hasConnection(connection: Connection) = connections.contains(connection)
+
         def getNodesAsList = nodes.values.toList
 
         def config = Config(getNodesAsList, connections.toList)
