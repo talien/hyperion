@@ -86,6 +86,9 @@ class Context
                 name : @nodeProperties.name
                 typeName : @nodeProperties.selectedType.id
                 options : clone @nodeProperties.selectedOptions if @nodeProperties.hasOptions
+        @nodeProperties.selectedOptions = null
+        @nodeProperties.selectedType = "source"
+        @nodeProperties.selectedItem = null
 
   setOptionsFor : (typeName) =>
      for item in @nodeProperties.types
