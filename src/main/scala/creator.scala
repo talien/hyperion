@@ -72,6 +72,10 @@ package hyperion {
           system.actorOf(Props(new FieldStatistics(fieldName)), nameFromOptions(options))
         }
 
+        case "filewriter" => {
+          val fileName = options.options("filename")
+          system.actorOf(Props(new FileDestination(fileName)), nameFromOptions(options))
+        }
       }
     }
   }

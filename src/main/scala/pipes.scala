@@ -159,6 +159,50 @@ package hyperion {
     }
   }
 
+  class FileDestination(fileName: String) extends Pipe {
+    val writer = new BufferedWriter(new OutputStreamWriter(
+      new FileOutputStream(fileName), "utf-8"))
+    var cancellable: Any = Nil
+    var lastMessage = DateTime.now
+    implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
+
+    def isoFormat(msg: Message) = {
+      val epoch = msg.nvpairs("DATE") toLong
+      val date = new DateTime(epoch)
+      val fmt = ISODateTimeFormat.dateTime()
+      s"<${msg.nvpairs("PRIO")}> ${fmt.print(date)} ${msg.nvpairs("HOST")} ${msg.nvpairs("PROGRAM")}${msg.nvpairs("PID")}: ${msg.nvpairs("MESSAGE")}\n"
+    }
+
+    override def preStart() = {
+      super.preStart()
+      cancellable = context.system.scheduler.schedule(FiniteDuration(0, SECONDS), FiniteDuration(1, SECONDS)) {
+        this.self ! Tick
+      }
+
+    }
+
+    override def postStop() = {
+      cancellable.asInstanceOf[akka.actor.Cancellable].cancel
+      writer.close()
+      super.postStop()
+    }
+
+    def process = {
+      case msg: Message => {
+        writer.write(isoFormat(msg))
+        lastMessage = DateTime.now
+      }
+
+      case Tick => {
+
+        if (DateTime.now.minus(lastMessage.getMillis).getMillis > 1000L) {
+          writer.flush()
+        }
+
+      }
+    }
+  }
+
   class Parser extends Pipe {
 
     def process = {

@@ -32,6 +32,11 @@ nodeTypes = [
   name : "Statistics"
   options :
     fieldname : ""
+,
+  id : "filewriter"
+  name : "File Destination"
+  options :
+    filename: ""
 ]
 
 clone = (obj) ->
