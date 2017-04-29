@@ -68,7 +68,7 @@
 
  </div> <!-- menu -->
 
- <div id="container" class="canvas" ng-click="containerClicked($event)">
+ <div id="landscape" class="landscape" ng-click="containerClicked($event)">
    <div id="{{item.id}}" class="node" hyperion-node ng-repeat="item in graph.items" ng-style="{'top': item.top, 'left': item.left }" ng-click="elementClicked($event)">
      {{item.content.name}}
    </div>

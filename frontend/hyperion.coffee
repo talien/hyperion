@@ -306,7 +306,7 @@ hyperionApp.directive "hyperionNode", ->
   link: (scope, element, attrs) ->
 
     jsPlumb.draggable element,
-      containment: "#container"
+      containment: "#landscape"
 
 #jsPlumb.ready ->
 
