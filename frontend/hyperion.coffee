@@ -138,7 +138,7 @@ class Graph
   connections : []
 
   add : (item) =>
-    item.id = 'a' + @items.length + 1
+    item.id = 'a' + (@items.length + 1)
     item.pending = true
     @items.push item
     jsPlumb.draggable item.id
