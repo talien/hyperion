@@ -74,7 +74,8 @@ package hyperion {
 
         case "filewriter" => {
           val fileName = options.options("filename")
-          system.actorOf(Props(new FileDestination(fileName)), nameFromOptions(options))
+          val template = options.options("template")
+          system.actorOf(Props(new FileDestination(fileName, template)), nameFromOptions(options))
         }
       }
     }

@@ -159,19 +159,13 @@ package hyperion {
     }
   }
 
-  class FileDestination(fileName: String) extends Pipe {
+  class FileDestination(fileName: String, template: String) extends Pipe {
     val writer = new BufferedWriter(new OutputStreamWriter(
       new FileOutputStream(fileName), "utf-8"))
     var cancellable: Any = Nil
     var lastMessage = DateTime.now
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
-
-    def isoFormat(msg: Message) = {
-      val epoch = msg.nvpairs("DATE") toLong
-      val date = new DateTime(epoch)
-      val fmt = ISODateTimeFormat.dateTime()
-      s"<${msg.nvpairs("PRIO")}> ${fmt.print(date)} ${msg.nvpairs("HOST")} ${msg.nvpairs("PROGRAM")}${msg.nvpairs("PID")}: ${msg.nvpairs("MESSAGE")}\n"
-    }
+    val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
 
     override def preStart() = {
       super.preStart()
@@ -189,7 +183,7 @@ package hyperion {
 
     def process = {
       case msg: Message => {
-        writer.write(isoFormat(msg))
+        writer.write(msgTemplate.format(msg))
         lastMessage = DateTime.now
       }
 

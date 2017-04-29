@@ -37,6 +37,7 @@ nodeTypes = [
   name : "File Destination"
   options :
     filename: ""
+    template: ""
 ]
 
 clone = (obj) ->
