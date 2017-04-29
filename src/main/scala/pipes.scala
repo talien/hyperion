@@ -134,6 +134,7 @@ package hyperion {
     }
 
     override def preStart = {
+      super.preStart()
       cancellable = context.system.scheduler.schedule(FiniteDuration(0, SECONDS), tick) {
         this.self ! Tick
       }
