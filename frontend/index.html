@@ -9,6 +9,11 @@
 <link rel="stylesheet" type="text/css" href="./css/bootstrap-theme.min.css">
 <link rel="stylesheet" type="text/css" href="hyperion.css">
 <body ng-controller="BoardController">
+  <ul class="nav nav-pills">
+    <li ng-class="isActiveTab('landscape') ? 'active' : ''" ng-click="setTab('landscape')"><a href="#">Landscape</a></li>
+    <li ng-class="isActiveTab('dashboard') ? 'active' : ''" ng-click="setTab('dashboard')"><a href="#">Dashboard</a></li>
+  </ul>
+  <div ng-show="isActiveTab('landscape')" id="landscape_content">
  <div id="menu" class="menu container">
   <div>
       <ul>
@@ -73,8 +78,8 @@
      {{item.content.name}}
    </div>
  </div>
-
- <div id="dashboard" class="dashboard">
+  </div>
+ <div id="dashboard" class="dashboard" ng-show="isActiveTab('dashboard')">
    <div ng-repeat="dbitem in dashboard.items" class="dashboard-item">
      Name : {{dbitem.name}} <br/>
      <div ng-show="dbitem.iscounter">
