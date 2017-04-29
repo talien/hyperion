@@ -40,19 +40,24 @@ package hyperion {
 	     parseDate(leftover).updated("PRIO", prio)
 	   }
 	
-	   def parseDate(message: String) =
+	   def parseDate(message: String) : Map[String, String] =
 	   {
 	     val dateregexp(date, leftover) = message
-	     val epoch = Try(dateformatter.parseDateTime(date).getMillis * 1000)
-	     val epoch2 = Try(if (epoch.isFailure)
-	        (dateformatterv2.parseDateTime(date).getMillis * 1000)
+	     val epoch = Try(dateformatter.parseDateTime(date).getMillis)
+	     if (epoch.isFailure) {
+				 val epoch2 = Try(dateformatterv2.parseDateTime(date).getMillis)
+				 if (epoch2.isFailure) {
+					 val epoch3 = (dateformatterv3.parseDateTime(date).getMillis)
+					 return parseHost(leftover).updated("DATE", epoch3 toString)
+				 }
+				 else {
+					 return parseHost(leftover).updated("DATE", epoch2.get toString)
+				 }
+			 }
 	     else
-	        epoch.get)
-	     val epoch3 = if (epoch2.isFailure)
-	        (dateformatterv3.parseDateTime(date).getMillis * 1000)
-	     else
-	        epoch2.get   
-	     parseHost(leftover).updated("DATE",epoch toString)
+	        return parseHost(leftover).updated("DATE",epoch.get toString)
+
+
 	   }
 	
 	   def parseHost(message: String) =
