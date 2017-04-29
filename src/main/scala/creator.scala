@@ -92,7 +92,7 @@ package hyperion {
         Registry.connect(connection.from, connection.to)
         val fromActor = context.system.actorSelection(pathForPipe(connection.from))
         val toActor = context.system.actorSelection(pathForPipe(connection.to))
-        fromActor ! AddActor(toActor)
+        fromActor ! AddPipe(toActor)
       }
       else
       {

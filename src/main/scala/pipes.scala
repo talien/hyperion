@@ -11,6 +11,9 @@ import akka.dispatch.RequiresMessageQueue
 import akka.dispatch.BoundedMessageQueueSemantics
 import akka.io._
 import akka.io.Tcp._
+import com.github.nscala_time.time.Imports._
+import org.joda.time.format._
+import java.io._
 
 package hyperion {
 
@@ -18,7 +21,7 @@ package hyperion {
 
   case class Terminate()
 
-  case class AddActor(actor: ActorSelection)
+  case class AddPipe(actor: ActorSelection)
 
   case class Query()
 
@@ -32,7 +35,7 @@ package hyperion {
     val next = ArrayBuffer[ActorSelection]()
 
     def receiveControl: PartialFunction[Any, Unit] = {
-      case AddActor(nextActor) =>
+      case AddPipe(nextActor) =>
         next += nextActor
     }
 

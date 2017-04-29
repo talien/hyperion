@@ -56,8 +56,8 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	     val probe2 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("MESSAGE","kakukk","almafa")))
 	     val expected = Message.withMessage("almafa")
-	     actor ! AddActor(system.actorSelection(probe1.ref.path))
-	     actor ! AddActor(system.actorSelection(probe2.ref.path))
+	     actor ! AddPipe(system.actorSelection(probe1.ref.path))
+	     actor ! AddPipe(system.actorSelection(probe2.ref.path))
 	     actor ! Message.withMessage("kakukk")
 	     probe1.expectMsg(100 millis, expected)
 	     probe2.expectMsg(100 millis, expected)
@@ -68,7 +68,7 @@ with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 	  {
 	     val probe1 = TestProbe()
 	     val actor = system.actorOf(Props( new Rewrite("AAA","kakukk","almafa")))
-	     actor ! AddActor(system.actorSelection(probe1.ref.path))
+	     actor ! AddPipe(system.actorSelection(probe1.ref.path))
 	     actor ! Message.withMessage("kakukk")
 	     probe1.expectMsg(100 millis, Message.withMessage("kakukk"))
 	  }
