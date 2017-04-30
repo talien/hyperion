@@ -2,43 +2,13 @@ import org.scalatest._
 import hyperion._
 import akka.actor._
 import akka.testkit._
-import akka.pattern.{ ask, pipe }
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
+
 import scala.concurrent.duration._
 import scala.util._
 import scala.concurrent.Await
-
-class TestMessage extends FlatSpec {
-    it should "be able to parse a single line" in {
-        val line = "<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD"
-        val result = parseMessage(line)
-        assert(result("PRIO") == "38")
-        assert(result("HOST") == "localhost")
-        assert(result("PROGRAM") == "prg00000")
-        assert(result("PID") == "[1234]")
-    }
-    
-    it should "be able to parse with legacy time" in {
-    	val line = "<30>Nov 30 18:28:01 ubu1 avahi-daemon[26471]: Successfully called chroot()."
-    	val result = parseMessage(line)
-    	assert(result("PRIO") == "30")
-    	assert(result("HOST") == "ubu1")
-    	assert(result("PROGRAM") == "avahi-daemon")
-    	assert(result("PID") == "[26471]")
-    	assert(result("MESSAGE") == "Successfully called chroot().")
-    }
-    
-    it should "be able to parse with legacy time and one-digit day" in {
-    	val line = "<30>Dec  2 18:28:01 ubu1 avahi-daemon[26471]: Successfully called chroot()."
-    	val result = parseMessage(line)
-    	assert(result("PRIO") == "30")
-    	assert(result("HOST") == "ubu1")
-    	assert(result("PROGRAM") == "avahi-daemon")
-    	assert(result("PID") == "[26471]")
-    	assert(result("MESSAGE") == "Successfully called chroot().")
-    }
-}
 
 class TestPipeCase (_system: ActorSystem) extends TestKit(_system) with ImplicitSender
 with WordSpecLike with MustMatchers with BeforeAndAfterAll {
