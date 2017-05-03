@@ -17,8 +17,12 @@ package hyperion {
       
       def withMessage(value:String) = empty.withMessage(value)
     }
+
+  object parseJsonMessage {
+
+  }
 		
-	object parseMessage {
+	object parseSyslogMessage {
 	   val dateformatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss")
 	   val dateformatterv2 = DateTimeFormat.forPattern("MMM dd HH:mm:ss")
 	   val dateformatterv3 = DateTimeFormat.forPattern("MMM  d HH:mm:ss")

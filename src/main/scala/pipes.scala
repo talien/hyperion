@@ -31,7 +31,7 @@ package hyperion {
 
   abstract class Pipe extends Actor
     //with RequiresMessageQueue[BoundedMessageQueueSemantics] {
-    {
+  {
     val next = ArrayBuffer[ActorSelection]()
 
     def receiveControl: PartialFunction[Any, Unit] = {
@@ -197,7 +197,16 @@ package hyperion {
     }
   }
 
-  class Parser extends Pipe {
+  class NoParser extends Pipe {
+    def process = {
+      case LogLine(line) => {
+        propagateMessage(Message.withMessage(line))
+        sender ! Ack
+      }
+    }
+  }
+
+  class SyslogParser extends Pipe {
 
     def process = {
       case LogLine(line) => {
@@ -212,7 +221,7 @@ package hyperion {
     }
 
     def parse(message: String) = {
-      val data = parseMessage(message)
+      val data = parseSyslogMessage(message)
       propagateMessage(Message(data))
     }
 

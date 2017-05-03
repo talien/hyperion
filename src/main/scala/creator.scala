@@ -42,7 +42,7 @@ package hyperion {
         case "printer" => system.actorOf(Props(new Printer), nameFromOptions(options))
         case "source" => {
           val port: Int = options.options("port").toInt
-          val parser = system.actorOf(Props(new Parser), nameFromOptions(options))
+          val parser = system.actorOf(Props(new SyslogParser), nameFromOptions(options))
           system.actorOf(Props(new ServerActor(parser, port)))
         }
         case "counter" => system.actorOf(Props(new MessageCounter), nameFromOptions(options))
