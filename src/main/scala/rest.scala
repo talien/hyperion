@@ -9,6 +9,7 @@ import hyperion._
 import spray.can.Http
 import spray.http._
 import akka.io.IO
+import scala.util.{Success, Failure}
 import spray.util._
 import spray.httpx._
 import MediaTypes._
@@ -151,8 +152,18 @@ package hyperion {
               post {
                 entity(as[Config]) {
                   config => {
-                    pipeCreator ! UploadConfig(config)
-                    complete("OK")
+                    val res = pipeCreator ? UploadConfig(config)
+                    complete {
+                      res map { x => {
+                          x match {
+                            case Success => "OK"
+                            case Failure(e) => e.getMessage()
+                          }
+                        }
+                      }
+                      
+                    }
+
                   }
                 }
               }

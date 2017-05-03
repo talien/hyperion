@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor._
 import hyperion._
 import akka.pattern.{ask, pipe}
+import scala.util.Try
 
 package hyperion {
 
@@ -105,6 +106,23 @@ package hyperion {
       }
     }
 
+    def validateConfig(config: Config): Unit = {
+      val nodesInConnections = config.connections.foldLeft(Set[String]())((set, connection) => set + (connection.from, connection.to))
+      val nodeNames = config.nodes.foldLeft(Set[String]())((set, node) => set + (node.id))
+      val invalidNodes = nodesInConnections.filter((node) => !(nodeNames contains node) )
+      if (invalidNodes.size > 0) {
+        throw new Exception("Lingering connections to unexistent nodes!")
+      }
+    }
+
+    def uploadConfig(config: Config) = {
+      Try {
+        validateConfig(config)
+        config.nodes map ((node) => create(node) )
+        config.connections map ((connection) => join(connection) )
+        None
+      }
+    }
 
     def receive = {
       case Create(node) => create(node)
@@ -148,8 +166,8 @@ package hyperion {
       case QueryConfig =>
         sender ! Registry.config
       case UploadConfig(config) => {
-        config.nodes map ((node) => create(node) )
-        config.connections map ((connection) => join(connection) )
+        val result = uploadConfig(config)
+        sender() ! result
       }
 
     }
