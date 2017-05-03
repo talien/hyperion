@@ -156,12 +156,12 @@ package hyperion {
                     complete {
                       res map { x => {
                           x match {
-                            case Success => "OK"
+                            case Success(_) => "OK"
                             case Failure(e) => e.getMessage()
                           }
                         }
                       }
-                      
+
                     }
 
                   }

@@ -108,7 +108,7 @@ package hyperion {
 
     def validateConfig(config: Config): Unit = {
       val nodesInConnections = config.connections.foldLeft(Set[String]())((set, connection) => set + (connection.from, connection.to))
-      val nodeNames = config.nodes.foldLeft(Set[String]())((set, node) => set + (node.id))
+      val nodeNames = config.nodes.foldLeft(Set[String]())((set, node) => set + (node.content.name))
       val invalidNodes = nodesInConnections.filter((node) => !(nodeNames contains node) )
       if (invalidNodes.size > 0) {
         throw new Exception("Lingering connections to unexistent nodes!")
