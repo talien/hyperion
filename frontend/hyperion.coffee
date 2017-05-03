@@ -287,7 +287,7 @@ hyperionApp.controller "BoardController", ($scope) ->
   $scope.context = context
   $scope.dashboard = dashboard
   $scope.graph.dashboard = dashboard
-  $scope.activeTab = 'dashboard'
+  $scope.activeTab = 'landscape'
 
   $scope.isActiveTab = (tab) ->
     return ($scope.activeTab == tab)
