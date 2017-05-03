@@ -85,7 +85,7 @@ class Context
   stopAdd : (items, event) =>
      if (@nodeProperties.name) and (@nodeProperties.selectedType.id)
         @adding = false
-        items.add
+        items.addNew
             left : event.originalEvent.layerX
             top : event.originalEvent.layerY
             content :
@@ -144,10 +144,13 @@ class Graph
   connections : []
 
   add : (item) =>
-    item.id = 'a' + (@items.length + 1)
-    item.pending = true
     @items.push item
     jsPlumb.draggable item.id
+
+  addNew : (item) =>
+    item.id = 'a' + (@items.length + 1)
+    item.pending = true
+    @add item
 
   getItemWithID : (id) =>
     for item in @items
@@ -182,27 +185,36 @@ class Graph
               errorhandler data
            success : (data) =>
               connection.pending = false
+   
+   hasConnection : (connection) =>
+     for conn in @connections
+        if (conn.from == connection.from and conn.to == connection.to)
+          return true
+     return false
 
    loadConnections : (connections) =>
      for connection in connections
-        fromid = (@getItemWithName connection.from).id
-        toid = (@getItemWithName connection.to).id
-        @connectWithPending fromid, toid, false
+       if not @hasConnection(connection)
+         console.log(connection)
+         fromid = (@getItemWithName connection.from).id
+         toid = (@getItemWithName connection.to).id
+         @connectWithPending fromid, toid, false
 
-   activateNode : (node, scope) =>
-     @dashboard.add scope,node.content
+   loadNode : (node, scope) =>
+     if not @getItemWithID(node.id)
+       @add node
+       @dashboard.add scope,node.content
 
-   activateNodes : (scope) =>
-     for node in @items
-       @activateNode node, scope
+   loadNodes : (scope, nodes) =>
+     for node in nodes
+       @loadNode node, scope
 
    load : (scope) =>
      $.ajax
        url : "/rest/config"
        type : 'GET'
        success : (data) =>
-         @items = data.nodes
-         @activateNodes(scope)
+         @loadNodes(scope, data.nodes)
          scope.$apply()
          @loadConnections data.connections
 
