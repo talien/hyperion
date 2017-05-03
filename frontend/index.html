@@ -12,6 +12,7 @@
   <ul class="nav nav-pills">
     <li ng-class="isActiveTab('landscape') ? 'active' : ''" ng-click="setTab('landscape')"><a href="#">Landscape</a></li>
     <li ng-class="isActiveTab('dashboard') ? 'active' : ''" ng-click="setTab('dashboard')"><a href="#">Dashboard</a></li>
+    <li class="pull-right" ng-click="shutdown()"><a href="#">Shutdown</a></li>
   </ul>
   <div ng-show="isActiveTab('landscape')" id="landscape_content">
  <div id="menu" class="menu container">

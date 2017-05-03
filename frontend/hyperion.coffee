@@ -226,6 +226,11 @@ class Graph
    connect : (from, to) =>
      @connectWithPending from, to, true
 
+   shutdown : () =>
+     $.ajax
+       url : "/rest/shutdown"
+       type: 'GET'
+
 class Dashboard
   items : []
 
@@ -314,6 +319,9 @@ hyperionApp.controller "BoardController", ($scope) ->
 
   $scope.loadClicked = () ->
     $scope.graph.load $scope
+
+  $scope.shutdown = () ->
+    $scope.graph.shutdown()
 
 
 hyperionApp.directive "hyperionNode", ->
