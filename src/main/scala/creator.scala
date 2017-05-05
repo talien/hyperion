@@ -30,65 +30,73 @@ package hyperion {
 
   trait HyperionPathResolver {
     val pipePrefix = "pipe_"
+    def actorSystemName : String
 
-    def pathForPipe(name: String) = "akka://hyperion/user/" + pipePrefix + name
+    def pathForPipe(name: String) = "akka://" + actorSystemName + "/user/" + pipePrefix + name
   }
 
-  object PipeFactory extends HyperionPathResolver {
+  class PipeFactory(actorSystemNameParam : String) extends HyperionPathResolver {
+
+    def actorSystemName = actorSystemNameParam
 
     def nameFromOptions(options: PipeOptions) = pipePrefix + options.name
 
-    def construct(options: PipeOptions, system: ActorSystem): Unit = {
+    def nameFromId(id: String) = pipePrefix + id
+
+    def construct(id: String, options: PipeOptions, system: ActorSystem): Unit = {
       options.typeName match {
-        case "printer" => system.actorOf(Props(new Printer), nameFromOptions(options))
+        case "printer" => system.actorOf(Props(new Printer), nameFromId(id))
         case "source" => {
           val port: Int = options.options("port").toInt
-          val parser = system.actorOf(Props(new SyslogParser), nameFromOptions(options))
+          val parser = system.actorOf(Props(new SyslogParser), nameFromId(id))
           system.actorOf(Props(new ServerActor(parser, port)))
         }
-        case "counter" => system.actorOf(Props(new MessageCounter), nameFromOptions(options))
+        case "counter" => system.actorOf(Props(new MessageCounter), nameFromId(id))
         case "rewrite" => {
           val fieldName = options.options("fieldname")
           val matchExpression = options.options("matchexpr")
           val substitutionValue = options.options("substvalue")
-          system.actorOf(Props(new Rewrite(fieldName, matchExpression, substitutionValue)), nameFromOptions(options))
+          system.actorOf(Props(new Rewrite(fieldName, matchExpression, substitutionValue)), nameFromId(id))
         }
         case "averageCounter" => {
           val counterName = options.options("counter")
           val counter = system.actorSelection(pathForPipe(counterName))
           val backlogSize: Int = options.options("backlog").toInt
-          val averageCounter = system.actorOf(Props(new AverageCounter(counter, 1 seconds, backlogSize)), nameFromOptions(options))
+          val averageCounter = system.actorOf(Props(new AverageCounter(counter, 1 seconds, backlogSize)), nameFromId(id))
         }
         case "filter" => {
           val fieldName = options.options("fieldname")
           val matchExpression = options.options("matchexpr")
-          system.actorOf(Props(new Filter(fieldName, matchExpression)), nameFromOptions(options))
+          system.actorOf(Props(new Filter(fieldName, matchExpression)), nameFromId(id))
         }
         case "tail" => {
           val backlogSize: Int = options.options("backlog").toInt
-          system.actorOf(Props(new Tail(backlogSize)), nameFromOptions(options))
+          system.actorOf(Props(new Tail(backlogSize)), nameFromId(id))
         }
         case "stats" => {
           val fieldName = options.options("fieldname")
-          system.actorOf(Props(new FieldStatistics(fieldName)), nameFromOptions(options))
+          system.actorOf(Props(new FieldStatistics(fieldName)), nameFromId(id))
         }
 
         case "filewriter" => {
           val fileName = options.options("filename")
           val template = options.options("template")
-          system.actorOf(Props(new FileDestination(fileName, template)), nameFromOptions(options))
+          system.actorOf(Props(new FileDestination(fileName, template)), nameFromId(id))
         }
       }
     }
   }
 
-  class PipeCreator extends Actor with HyperionPathResolver with ActorLogging{
+  class PipeCreator(system: ActorSystem, pipeFactory: PipeFactory) extends Actor with HyperionPathResolver with ActorLogging{
 
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
 
+    def actorSystemName = pipeFactory.actorSystemName
+
     def create(node: NodeProperty) = {
+      log.debug("Creating node:" + node.id)
       if (!Registry.hasNode(node.id)) {
-        PipeFactory.construct(node.content, context.system)
+        pipeFactory.construct(node.id, node.content, system)
         Registry.add(node)
       }
     }
@@ -96,21 +104,24 @@ package hyperion {
     def join(connection: Connection) = {
       if (!Registry.hasConnection(connection)) {
         Registry.connect(connection.from, connection.to)
-        val fromActor = context.system.actorSelection(pathForPipe(connection.from))
-        val toActor = context.system.actorSelection(pathForPipe(connection.to))
+        val fromActor = system.actorSelection(pathForPipe(connection.from))
+        val toActor = system.actorSelection(pathForPipe(connection.to))
         fromActor ! AddPipe(toActor)
       }
       else
       {
-        log.info("Connection from " + connection.from + " to " + connection.to + "already exists")
+        log.debug("Connection from " + connection.from + " to " + connection.to + "already exists")
       }
     }
 
     def validateConfig(config: Config): Unit = {
       val nodesInConnections = config.connections.foldLeft(Set[String]())((set, connection) => set + (connection.from, connection.to))
-      val nodeNames = config.nodes.foldLeft(Set[String]())((set, node) => set + (node.content.name))
+      log.debug("Name of nodes in connections:" + nodesInConnections)
+      val nodeNames = config.nodes.foldLeft(Set[String]())((set, node) => set + (node.id))
+      log.debug("Name of all nodes:" + nodeNames)
       val invalidNodes = nodesInConnections.filter((node) => !(nodeNames contains node) )
       if (invalidNodes.size > 0) {
+        log.info("Invalid nodes:" + invalidNodes)
         throw new Exception("Lingering connections to unexistent nodes!")
       }
     }
@@ -131,7 +142,7 @@ package hyperion {
       }
       case CounterQuery(name) => {
         val counter = context.system.actorSelection(pathForPipe(name))
-        val s = sender()
+        val s = sender
         log.info(pathForPipe(name));
         log.info(counter.toString());
         log.info(sender.toString());
@@ -153,13 +164,14 @@ package hyperion {
       }
 
       case TailQuery(name) => {
-        val counter = context.system.actorSelection(pathForPipe(name))
-        val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[List[Message]]
+        log.debug("Querying tail:" + pathForPipe(name))
+        val tail = system.actorSelection(pathForPipe(name))
+        val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
         sender ! result
       }
 
       case StatsQuery(name) => {
-        val counter = context.system.actorSelection(pathForPipe(name))
+        val counter = system.actorSelection(pathForPipe(name))
         val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
         sender ! result
       }
@@ -167,7 +179,7 @@ package hyperion {
         sender ! Registry.config
       case UploadConfig(config) => {
         val result = uploadConfig(config)
-        sender() ! result
+        sender ! result
       }
 
     }

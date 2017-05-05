@@ -29,7 +29,7 @@ package hyperion {
 
   case class Tick()
 
-  abstract class Pipe extends Actor
+  abstract class Pipe extends Actor with ActorLogging
     //with RequiresMessageQueue[BoundedMessageQueueSemantics] {
   {
     val next = ArrayBuffer[ActorSelection]()
@@ -40,7 +40,7 @@ package hyperion {
     }
 
     override def preStart() = {
-      System.out.println("Actor started:" + this.toString() + " " + self.path.name);
+      log.info("Actor started:" + this.toString() + " " + self.path.toString);
     }
 
     def receive = receiveControl orElse process
@@ -121,21 +121,23 @@ package hyperion {
     }
   }
 
-  class AverageCounter(counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor {
+  class AverageCounter(counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor with ActorLogging {
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
     var backlog = List[Int]()
     var cancellable: Any = Nil
     var lastData = 0
 
     def updateBacklog = {
+      log.debug("Updating backlog in " + self.path.toString)
       val currentData = Await.result(counter ? Query, timeout.duration).asInstanceOf[Integer]
       backlog = (currentData - lastData) :: (backlog take (backlogsize - 1))
+      log.debug("Backlog in " + self.path.toString + " : " + backlog)
       lastData = currentData
     }
 
     override def preStart = {
       super.preStart()
-      cancellable = context.system.scheduler.schedule(FiniteDuration(0, SECONDS), tick) {
+      cancellable = context.system.scheduler.schedule(tick, tick) {
         this.self ! Tick
       }
     }

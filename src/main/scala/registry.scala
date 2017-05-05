@@ -19,5 +19,10 @@ package hyperion {
         def getNodesAsList = nodes.values.toList
 
         def config = Config(getNodesAsList, connections.toList)
+
+        def reset = {
+            nodes.clear()
+            connections.clear()
+        }
     }
 }
