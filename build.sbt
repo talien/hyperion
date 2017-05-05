@@ -30,3 +30,5 @@ assemblySettings
 fork in run := true
 
 javaOptions in run += "-XX:+UseConcMarkSweepGC" 
+
+parallelExecution in Test := false
