@@ -1,4 +1,4 @@
-const hyperionApp = angular.module("hyperionApp", []);
+const hyperionApp = angular.module("hyperionApp", ["angular-uuid"]);
 
 const nodeTypes = [{
   id: "source",
@@ -155,7 +155,7 @@ hyperionApp.service('ContextService', function() {
   };
 });
 
-hyperionApp.service('GraphService', function () {
+hyperionApp.service('GraphService', function (uuid) {
   this.items = [];
   this.connections = [];
 
@@ -169,7 +169,7 @@ hyperionApp.service('GraphService', function () {
   };
 
   this.addNew = function (item) {
-    item.id = 'a' + (this.items.length + 1);
+    item.id = uuid.v4();
     item.pending = true;
     this.add(item);
   };
