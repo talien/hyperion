@@ -292,7 +292,7 @@ hyperionApp.service('GraphService', function (uuid) {
   this.connectWithPending = function (from, to, pending) {
     if (this.isConnected(from, to))
       return;
-    connectNodes(from, to);
+    this.connectNodes(from, to);
     this.connections.push({
       from: from,
       to: to,
@@ -360,7 +360,7 @@ Dashboard.prototype.add = function (scope, node) {
 
   repeater = function () {
     $.ajax({
-      url: "/rest/" + node.typeName + "/" + node.id,
+      url: "/rest/" + node.content.typeName + "/" + node.id,
       type: 'GET',
       success: function (data) {
         update(item, data);
