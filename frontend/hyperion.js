@@ -244,9 +244,7 @@ hyperionApp.service('GraphService', function () {
     connections.forEach(function (connection) {
       if (!that.isConnected(connection)) {
         console.log(connection);
-        fromid = that.getItemWithName(connection.from).id
-        toid = that.getItemWithName(connection.to).id
-        that.connectWithPending(fromid, toid, false)
+        that.connectWithPending(connection.from, connection.to, false)
       }
     });
   };
@@ -254,7 +252,7 @@ hyperionApp.service('GraphService', function () {
   this.loadNode = function (node, scope) {
     if (!this.getItemWithID(node.id)) {
       this.add(node);
-      this.dashboard.add(scope, node.content);
+      this.dashboard.add(scope, node);
     }
   };
 
@@ -295,11 +293,9 @@ hyperionApp.service('GraphService', function () {
     if (this.isConnected(from, to))
       return;
     connectNodes(from, to);
-    fromname = this.getItemWithID(from).content.name;
-    toname = this.getItemWithID(to).content.name;
     this.connections.push({
-      from: fromname,
-      to: toname,
+      from: from,
+      to: to,
       pending: pending
     });
   };
@@ -320,22 +316,13 @@ function Dashboard() {
   this.items = [];
 }
 
-Dashboard.prototype.getItemWithName = function (name) {
-  var result = null;
-  this.items.forEach(function (item) {
-    if (item.name === name) {
-      result = item;
-    }
-  });
-  return result;
-}
-
 Dashboard.prototype.add = function (scope, node) {
   var update = null;
   var item = null;
-  if (node.typeName === "counter") {
+  if (node.content.typeName === "counter") {
     item = {
-      name: node.name,
+      id: node.id,
+      name: node.content.name,
       iscounter: true
     }
     update = function (item, data) {
@@ -343,9 +330,10 @@ Dashboard.prototype.add = function (scope, node) {
     }
   }
 
-  if (node.typeName === "tail") {
+  if (node.content.typeName === "tail") {
     item = {
-      name: node.name,
+      id: node.id,
+      name: node.content.name,
       istail: true
     }
     update = function (item, data) {
@@ -353,9 +341,10 @@ Dashboard.prototype.add = function (scope, node) {
     }
   }
 
-  if (node.typeName === "stats") {
+  if (node.content.typeName === "stats") {
     item = {
-      name: node.name,
+      id: node.id,
+      name: node.content.name,
       isstats: true
     }
     update = function (item, data) {
@@ -371,7 +360,7 @@ Dashboard.prototype.add = function (scope, node) {
 
   repeater = function () {
     $.ajax({
-      url: "/rest/" + node.typeName + "/" + node.name,
+      url: "/rest/" + node.typeName + "/" + node.id,
       type: 'GET',
       success: function (data) {
         update(item, data);
