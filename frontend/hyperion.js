@@ -155,7 +155,18 @@ hyperionApp.service('ContextService', function() {
   };
 });
 
-hyperionApp.service('GraphService', function (uuid) {
+hyperionApp.service('HyperionBackend', function($http) {
+  this.getConfig = function() {
+    return $http.get("/rest/config");
+  }
+
+  this.shutDown = function() {
+    return $http.post("/rest/shutdown");
+  }
+
+});
+
+hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
   this.items = [];
   this.connections = [];
 
@@ -264,15 +275,10 @@ hyperionApp.service('GraphService', function (uuid) {
   };
 
   this.load = function (scope) {
-    var that = this;
-    $.ajax({
-      url: "/rest/config",
-      type: 'GET',
-      success: function (data) {
-        that.loadNodes(scope, data.nodes);
-        scope.$apply();
-        that.loadConnections(data.connections);
-      }
+    HyperionBackend.getConfig().then((response) => {
+        const data = response.data;
+        this.loadNodes(scope, data.nodes);
+        this.loadConnections(data.connections);
     });
   };
 
@@ -304,12 +310,6 @@ hyperionApp.service('GraphService', function (uuid) {
     this.connectWithPending(from, to, true);
   };
 
-  this.shutdown = function () {
-    $.ajax({
-      url: "/rest/shutdown",
-      type: 'GET'
-    });
-  };
 });
 
 function Dashboard() {
@@ -376,7 +376,7 @@ Dashboard.prototype.add = function (scope, node) {
 
 const dashboard = new Dashboard();
 
-hyperionApp.controller("BoardController", function BoardController($scope, GraphService, ContextService) {
+hyperionApp.controller("BoardController", function BoardController($scope, GraphService, ContextService, HyperionBackend) {
   $scope.dashboard = dashboard;
   GraphService.dashboard = dashboard;
   $scope.items = GraphService.getItems();
@@ -417,8 +417,10 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   }
 
   $scope.shutdown = function () {
-    GraphService.shutdown()
+    HyperionBackend.shutDown();
   }
+
+  GraphService.load($scope);
 });
 
 hyperionApp.directive("hyperionNode", function () {
