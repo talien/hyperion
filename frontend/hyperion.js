@@ -164,6 +164,10 @@ hyperionApp.service('HyperionBackend', function($http) {
     return $http.post("/rest/shutdown");
   }
 
+  this.postConfig = function(data) {
+    return $http.post("/rest/config", JSON.stringify(data));
+  }  
+
 });
 
 hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
@@ -205,40 +209,13 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
     return result;
   };
 
-  this.commit = function (errorhandler) {
-    this.items.forEach(function (item) {
-      if ((item.pending) || (item.moved)) {
-        $.ajax({
-          url: "/rest/create",
-          data: JSON.stringify(item),
-          contentType: 'application/json',
-          type: 'POST',
-          error: function (data) {
-            errorhandler(data);
-          },
-          success: function (data) {
-            item.pending = false;
-            item.moved = false;
-          }
-        });
-      }
-    });
-
-    this.connections.forEach(function (connection) {
-      if (connection.pending) {
-        $.ajax({
-          url: "/rest/join/" + connection.from + "/" + connection.to,
-          type: 'GET',
-          error: function (data) {
-            errorhandler(data);
-          },
-          success: function (data) {
-            connection.pending = false;
-          }
-        });
-      }
-    });
-  };
+  this.commit = function(errorhandler) {
+    config = {
+      nodes : this.items,
+      connections : this.connections
+    }
+    HyperionBackend.postConfig(config).catch(errorhandler);
+  }
 
   this.isConnected = function (from, to) {
     var result = false;
