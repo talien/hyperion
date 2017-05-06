@@ -4,10 +4,15 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
 <script type="text/javascript" src="./jquery.jsPlumb-1.5.4.js"></script>
 <script type="text/javascript" src="./angular.min.js"></script>
+<script type="text/javascript" src="./angular-sanitize.js"></script>
 <script type="text/javascript" src="./angular-uuid.js"></script>
+<script type="text/javascript" src="./ui-bootstrap-tpls-2.5.0.min.js"></script>
+<script type="text/javascript" src="./jsondiffpatch.min.js"></script>
+<script type="text/javascript" src="./jsondiffpatch-formatters.min.js"></script>
 <script type="text/javascript" src="./hyperion.js"></script>
 <link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css">
 <link rel="stylesheet" type="text/css" href="./css/bootstrap-theme.min.css">
+<link rel="stylesheet" type="text/css" href="./css/jsondiffpatch-html.css">
 <link rel="stylesheet" type="text/css" href="hyperion.css">
 <body ng-controller="BoardController">
 <ul class="nav nav-pills" ng-init="activeTab = 'landscape'">
@@ -23,6 +28,7 @@
             <ul>
                 <li class="btn btn-hyperion" ng-click="addClicked()">Add</li>
                 <li class="btn btn-hyperion" ng-click="connectClicked()">Connect</li>
+                <li class="btn btn-hyperion" ng-click="diffClicked()">Diff</li>
                 <li class="btn btn-hyperion" ng-click="commitClicked()">Commit</li>
                 <li class="btn btn-hyperion" ng-click="loadClicked()">Load</li>
             </ul>
@@ -85,7 +91,8 @@
     <div id="landscape" class="landscape" ng-click="containerClicked($event)">
         <div id="{{item.id}}" class="node" hyperion-node ng-repeat="item in items"
              ng-style="{'top': item.top, 'left': item.left }" ng-click="elementClicked($event)">
-            {{item.content.name}}
+            <div class="node-name">{{item.content.name}}</div>
+            <div class="node-type">{{item.content.typeName}}</div>
         </div>
     </div>
 </div>

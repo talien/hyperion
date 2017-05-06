@@ -2,12 +2,20 @@
     background-color:#88F;
     border-radius:10px; 
     border-width:10px; 
-    width:100px;
-    height:40px;
+    width:140px;
+    height:80px;
     text-align: center;
     position: absolute;
     padding-top: 10px;
     font-weight: bold;
+}
+
+.node-name {
+    font-size: 130%;
+}
+
+.node-type {
+    font-size: 100%;
 }
 
 .node:hover {

@@ -1,4 +1,4 @@
-const hyperionApp = angular.module("hyperionApp", ["angular-uuid"]);
+const hyperionApp = angular.module("hyperionApp", ["angular-uuid", "ui.bootstrap", "ngSanitize"]);
 
 const nodeTypes = [{
   id: "source",
@@ -115,12 +115,9 @@ hyperionApp.service('ContextService', function() {
     this.setOptionsFor(this.nodeProperties.selectedType.id)
   };
 
-  this.select = function (nodeId, graph, element) {
+  this.select = function (graph, element) {
     this.selected = true;
-    item = graph.getItemWithID(nodeId);
-    if ((item.left != element.offsetLeft) || (item.top != element.offsetTop)) {
-      item.moved = true
-    }
+    item = graph.getItemWithID(element.id);
     item.left = element.offsetLeft;
     item.top = element.offsetTop;
     this.nodeProperties.selectedItem = item;
@@ -140,17 +137,17 @@ hyperionApp.service('ContextService', function() {
     this.secondItem = false;
   }
 
-  this.onElementClicked = function (node, graph) {
+  this.onElementClicked = function (element, graph) {
     if (this.connecting) {
       if (this.firstItem === false) {
-        this.firstItem = node.id;
+        this.firstItem = element.id;
       } else {
-        this.secondItem = node.id;
+        this.secondItem = element.id;
         graph.connect(this.firstItem, this.secondItem);
         this.stopConnect();
       }
     } else {
-      this.select(node.id, graph, node)
+      this.select(graph, element);
     }
   };
 });
@@ -173,6 +170,15 @@ hyperionApp.service('HyperionBackend', function($http) {
 hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
   this.items = [];
   this.connections = [];
+  this.differ = jsondiffpatch.create({
+      arrays: {
+        detectMove: true,
+        includeValueOnMove: false
+      },
+      propertyFilter: function(name, context) {
+        return ((name.slice(0, 1) !== '$') && (name.slice(0, 1) !== '_'));
+      }
+  });
 
   this.getItems = function () {
     return this.items;
@@ -185,7 +191,6 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
 
   this.addNew = function (item) {
     item.id = uuid.v4();
-    item.pending = true;
     this.add(item);
   };
 
@@ -272,20 +277,32 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
     });
   };
 
-  this.connectWithPending = function (from, to, pending) {
+  this.connectWithPending = function (from, to) {
     if (this.isConnected(from, to))
       return;
     this.connectNodes(from, to);
     this.connections.push({
       from: from,
-      to: to,
-      pending: pending
+      to: to
     });
   };
 
   this.connect = function (from, to) {
     this.connectWithPending(from, to, true);
   };
+
+  this.diff = function () {
+    return HyperionBackend.getConfig().then((response) => {
+        const serverConfig = response.data;
+        const config = {
+          nodes : this.items,
+          connections : this.connections
+        }
+        var delta = this.differ.diff(serverConfig, config);
+        console.log(delta);
+        return { diff:delta, config:serverConfig };
+    });
+  }
 
 });
 
@@ -353,7 +370,15 @@ Dashboard.prototype.add = function (scope, node) {
 
 const dashboard = new Dashboard();
 
-hyperionApp.controller("BoardController", function BoardController($scope, GraphService, ContextService, HyperionBackend) {
+hyperionApp.controller("DiffDialogCtrl", function DiffDialogCtrl($scope, GraphService, $sanitize) {
+   $scope.content = "";
+   GraphService.diff().then((data) => {
+     $scope.content = jsondiffpatch.formatters.html.format(data.diff, data.config);
+   });
+
+});
+
+hyperionApp.controller("BoardController", function BoardController($scope, GraphService, ContextService, HyperionBackend, $uibModal) {
   $scope.dashboard = dashboard;
   GraphService.dashboard = dashboard;
   $scope.items = GraphService.getItems();
@@ -364,7 +389,7 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   }
 
   $scope.elementClicked = function ($event) {
-    ContextService.onElementClicked($event.target, GraphService);
+    ContextService.onElementClicked($event.currentTarget, GraphService);
     $event.stopPropagation();
   }
 
@@ -391,6 +416,21 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
 
   $scope.loadClicked = function () {
     GraphService.load($scope);
+  }
+
+  $scope.diffClicked = function() {
+    var modalInstance = $uibModal.open({
+      ariaLabelledBy: 'modal-title',
+      ariaDescribedBy: 'modal-body',
+      templateUrl: 'diffdialog.html',
+      controller: 'DiffDialogCtrl',
+      controllerAs: '$ctrl',
+      resolve: {
+        items: function () {
+          return null;
+        }
+      }
+    });
   }
 
   $scope.shutdown = function () {
