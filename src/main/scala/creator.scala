@@ -186,45 +186,41 @@ package hyperion {
       }
     }
 
+    def queryPipe[T](name: String) = {
+      val pipe = context.system.actorSelection(pathForPipe(name))
+      val s = sender
+      pipe.resolveOne() onComplete {
+        case Success(actorRef) => {
+          log.info("Actor Found");
+          log.info(sender.toString());
+
+          val result = Await.result(actorRef ? Query, timeout.duration).asInstanceOf[T]
+          s ! result
+        }
+        case Failure(e) => {
+          log.info("Actor Not Found");
+          log.info(sender.toString());
+
+          s ! akka.actor.Status.Failure(e)
+        }
+      }
+    }
+
     def receive = {
       case Create(node) => create(node)
       case Join(from, to) => {
         join(Connection(from, to))
       }
       case CounterQuery(name) => {
-        val counter = context.system.actorSelection(pathForPipe(name))
-        val s = sender
-        log.info(pathForPipe(name));
-        log.info(counter.toString());
-        log.info(sender.toString());
-        counter.resolveOne() onComplete {
-            case Success(actorRef) => {
-               log.info("Actor Found");
-               log.info(sender.toString());
-
-               val result = Await.result(actorRef ? Query, timeout.duration).asInstanceOf[Integer]
-               s ! result
-            }
-            case Failure(e) => {
-               log.info("Actor Not Found");
-               log.info(sender.toString());
-
-               s ! akka.actor.Status.Failure(e)
-            }
-        }
+        queryPipe[Integer](name)
       }
 
       case TailQuery(name) => {
-        log.debug("Querying tail:" + pathForPipe(name))
-        val tail = system.actorSelection(pathForPipe(name))
-        val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
-        sender ! result
+        queryPipe[List[Message]](name)
       }
 
       case StatsQuery(name) => {
-        val counter = system.actorSelection(pathForPipe(name))
-        val result = Await.result(counter ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
-        sender ! result
+        queryPipe[Map[String, Integer]](name)
       }
       case QueryConfig =>
         sender ! Registry.config
