@@ -21,7 +21,7 @@ package hyperion {
 
   case class Terminate()
 
-  case class AddPipe(actor: ActorSelection)
+  case class PipeConnectionUpdate(add: Map[String, ActorSelection], remove: List[String])
 
   case class Query()
 
@@ -32,11 +32,17 @@ package hyperion {
   abstract class Pipe extends Actor with ActorLogging
     //with RequiresMessageQueue[BoundedMessageQueueSemantics] {
   {
-    val next = ArrayBuffer[ActorSelection]()
+    val nextPipes = scala.collection.mutable.HashMap.empty[String,ActorSelection]
 
     def receiveControl: PartialFunction[Any, Unit] = {
-      case AddPipe(nextActor) =>
-        next += nextActor
+      case PipeConnectionUpdate(add, remove) => {
+        add map { case (id, pipe) =>
+          nextPipes.put(id, pipe)
+        }
+        remove map {(id) => {
+          nextPipes.remove(id)
+        }}
+      }
     }
 
     override def preStart() = {
@@ -48,10 +54,10 @@ package hyperion {
     def process: PartialFunction[Any, Unit]
 
     def propagateMessage(message: Message) =
-      if (!next.isEmpty) {
-        next.foreach(actor =>
-          actor ! message
-        )
+      if (!nextPipes.isEmpty) {
+        nextPipes.foreach(data => {
+          data._2 ! message
+        })
       }
   }
 

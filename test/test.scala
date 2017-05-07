@@ -25,8 +25,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       val probe2 = TestProbe()
       val actor = system.actorOf(Props(new Rewrite("MESSAGE", "kakukk", "almafa")))
       val expected = Message.withMessage("almafa")
-      actor ! AddPipe(system.actorSelection(probe1.ref.path))
-      actor ! AddPipe(system.actorSelection(probe2.ref.path))
+      actor ! PipeConnectionUpdate(Map(("alma", system.actorSelection(probe1.ref.path))),List())
+      actor ! PipeConnectionUpdate(Map(("korte", system.actorSelection(probe2.ref.path))), List())
       actor ! Message.withMessage("kakukk")
       probe1.expectMsg(1000 millis, expected)
       probe2.expectMsg(1000 millis, expected)
@@ -36,7 +36,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     "not change message if value is not present" in {
       val probe1 = TestProbe()
       val actor = system.actorOf(Props(new Rewrite("AAA", "kakukk", "almafa")))
-      actor ! AddPipe(system.actorSelection(probe1.ref.path))
+      actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
       actor ! Message.withMessage("kakukk")
       probe1.expectMsg(1000 millis, Message.withMessage("kakukk"))
     }

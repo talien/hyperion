@@ -7,12 +7,14 @@ package hyperion {
 
     object Registry {
         val nodes : scala.collection.mutable.Map[String, NodeProperty] = scala.collection.mutable.Map[String,NodeProperty]();
-        val connections : scala.collection.mutable.MutableList[Connection] = scala.collection.mutable.MutableList[Connection]();
+        val connections : scala.collection.mutable.ListBuffer[Connection] = scala.collection.mutable.ListBuffer[Connection]();
         def add(node : NodeProperty) = nodes.update(node.id, node)
 
         def hasNode(id: String) = nodes.contains(id)
 
         def connect(from: String, to: String) = connections += Connection(from, to)
+
+        def disconnect(from: String, to: String) = connections -= Connection(from, to)
 
         def hasConnection(connection: Connection) = connections.contains(connection)
 

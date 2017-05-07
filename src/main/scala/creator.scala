@@ -106,7 +106,7 @@ package hyperion {
         Registry.connect(connection.from, connection.to)
         val fromActor = system.actorSelection(pathForPipe(connection.from))
         val toActor = system.actorSelection(pathForPipe(connection.to))
-        fromActor ! AddPipe(toActor)
+        fromActor ! PipeConnectionUpdate(Map((connection.to, toActor)), List())
       }
       else
       {
@@ -126,11 +126,62 @@ package hyperion {
       }
     }
 
+    def getListOfUpdates(add: Set[Connection], remove: Set[Connection]) : Map[String, PipeConnectionUpdate] = {
+      val adding = scala.collection.mutable.HashMap.empty[String,List[String]]
+      add map ((connection) => {
+        if (adding contains (connection.from)) {
+          adding.put(connection.from, connection.to :: adding.get(connection.from).asInstanceOf[List[String]])
+        } else {
+          adding.put(connection.from, List(connection.to))
+        }
+      })
+      val removing = scala.collection.mutable.HashMap.empty[String,List[String]]
+      remove map ((connection) => {
+        if (removing contains (connection.from)) {
+          removing.put(connection.from, connection.to :: removing.get(connection.from).asInstanceOf[List[String]])
+        } else {
+          removing.put(connection.from, List(connection.to))
+        }
+      })
+      println("Adding:" + adding)
+      println("Removing:" + removing)
+      val updates = Registry.nodes.keys map ((key : String) => {
+        val addPart = if (adding contains key) adding.get(key).get map ((tokey) => tokey -> system.actorSelection(pathForPipe(tokey))) toMap else Map[String,ActorSelection]()
+        val removePart = if (removing contains key) removing.get(key).get else List[String]()
+        key -> PipeConnectionUpdate(
+          addPart,
+          removePart
+        )
+      }) toMap ;
+      println("Updates before filter:" + updates)
+      updates.filter {case(id, update) => ((update.add.size != 0) || (update.remove.size != 0))}
+    }
+
+    def updateConnections(connections: List[Connection]) = {
+      val currentConnectionSet = Registry.connections.toSet
+      println("Current:" + currentConnectionSet)
+      val nextConnectionSet = connections.toSet
+      println("Next:" + nextConnectionSet)
+      val removableConnections = currentConnectionSet.diff(nextConnectionSet)
+      val addingConnections = nextConnectionSet.diff(currentConnectionSet)
+      println("Removable:" + removableConnections)
+      val updates = getListOfUpdates(addingConnections, removableConnections)
+      println("Updates:" + updates)
+      updates map { case(id, update) => {
+        val fromActor = system.actorSelection(pathForPipe(id))
+        fromActor ! update
+      }}
+      addingConnections map { (connection) => {
+        Registry.connect(connection.from, connection.to)
+      }}
+    }
+
     def uploadConfig(config: Config) = {
       Try {
+        println("Config:" + config)
         validateConfig(config)
         config.nodes map ((node) => create(node) )
-        config.connections map ((connection) => join(connection) )
+        updateConnections(config.connections)
         None
       }
     }
