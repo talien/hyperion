@@ -23,7 +23,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     "rewrite a message" in {
       val probe1 = TestProbe()
       val probe2 = TestProbe()
-      val actor = system.actorOf(Props(new Rewrite("MESSAGE", "kakukk", "almafa")))
+      val actor = system.actorOf(Props(new Rewrite("id", "MESSAGE", "kakukk", "almafa")))
       val expected = Message.withMessage("almafa")
       actor ! PipeConnectionUpdate(Map(("alma", system.actorSelection(probe1.ref.path))),List())
       actor ! PipeConnectionUpdate(Map(("korte", system.actorSelection(probe2.ref.path))), List())
@@ -35,7 +35,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 
     "not change message if value is not present" in {
       val probe1 = TestProbe()
-      val actor = system.actorOf(Props(new Rewrite("AAA", "kakukk", "almafa")))
+      val actor = system.actorOf(Props(new Rewrite("id", "AAA", "kakukk", "almafa")))
       actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
       actor ! Message.withMessage("kakukk")
       probe1.expectMsg(1000 millis, Message.withMessage("kakukk"))
@@ -45,14 +45,14 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     implicit val timeout = Timeout(1000 millis)
 
     "respond with zero in initial state" in {
-      val actor = system.actorOf(Props(new MessageCounter))
+      val actor = system.actorOf(Props(new MessageCounter("id")))
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
       assert(result == 0)
     }
 
     "respond with one if a message has arrived" in {
-      val actor = system.actorOf(Props(new MessageCounter))
+      val actor = system.actorOf(Props(new MessageCounter("id")))
       actor ! Message.withMessage("kakukk")
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
@@ -60,7 +60,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "reset counter if Reset message got" in {
-      val actor = system.actorOf(Props(new MessageCounter))
+      val actor = system.actorOf(Props(new MessageCounter("id")))
       actor ! Message.withMessage("kakukk")
       actor ! Reset
       val future = actor ? Query
@@ -72,7 +72,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   "FieldValueCounter" must {
     implicit val timeout = Timeout(100 millis)
     "not count anything if field is not present" in {
-      val actor = system.actorOf(Props(new FieldValueCounter("AAA", "kakukk")))
+      val actor = system.actorOf(Props(new FieldValueCounter("id","AAA", "kakukk")))
       actor ! Message.withMessage("kakukk")
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
@@ -80,7 +80,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "count field is matches" in {
-      val actor = system.actorOf(Props(new FieldValueCounter("MESSAGE", "kakukk")))
+      val actor = system.actorOf(Props(new FieldValueCounter("id", "MESSAGE", "kakukk")))
       actor ! Message.withMessage("kakukk")
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
@@ -88,7 +88,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "not count field is not matches, but present" in {
-      val actor = system.actorOf(Props(new FieldValueCounter("MESSAGE", "kakukk")))
+      val actor = system.actorOf(Props(new FieldValueCounter("id","MESSAGE", "kakukk")))
       actor ! Message.withMessage("almafa")
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
@@ -99,8 +99,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   "AverageCounter" must {
     implicit val timeout = Timeout(10000 millis)
     "return zero when no message present" in {
-      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter)).path)
-      val averageCounter = system.actorOf(Props(new AverageCounter(counter, 100 millis, 10)))
+      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter("id"))).path.toString)
+      val averageCounter = system.actorOf(Props(new AverageCounter("id", counter, 100 millis, 10)))
       val result = Await.result(averageCounter ? Query, timeout.duration).asInstanceOf[Integer]
       assert(result == 0)
       averageCounter ! PoisonPill
@@ -108,8 +108,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "after one message and one tick, average should one" in {
-      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter)).path)
-      val averageCounter = system.actorOf(Props(new AverageCounter(counter, 10000 millis, 10)))
+      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter("id"))).path.toString)
+      val averageCounter = system.actorOf(Props(new AverageCounter("id", counter, 10000 millis, 10)))
       counter ! Message.empty
       averageCounter ! Tick
       val result = Await.result(averageCounter ? Query, timeout.duration).asInstanceOf[Integer]
@@ -119,8 +119,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "after one message per tick, average should one" in {
-      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter)).path.toString)
-      val averageCounter = system.actorOf(Props(new AverageCounter(counter, 10000 millis, 10)))
+      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter("id"))).path.toString)
+      val averageCounter = system.actorOf(Props(new AverageCounter("id", counter, 10000 millis, 10)))
       Thread.sleep(10)
       counter ! Message.empty
       Thread.sleep(10)
@@ -137,8 +137,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
     "should only keep backlogsizenumber of items" in {
-      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter)).path)
-      val averageCounter = system.actorOf(Props(new AverageCounter(counter, 10000 millis, 2)))
+      val counter = system.actorSelection(system.actorOf(Props(new MessageCounter("id"))).path.toString)
+      val averageCounter = system.actorOf(Props(new AverageCounter("id", counter, 10000 millis, 2)))
       counter ! Message.empty
       counter ! Message.empty
       counter ! Message.empty
@@ -163,20 +163,20 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   "Tail" must {
     implicit val timeout = Timeout(1000 millis)
     "return empty list when no message arrived" in {
-      val tail = system.actorOf(Props(new Tail(1)))
+      val tail = system.actorOf(Props(new Tail("id", 1)))
       val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
       assert(result == List[Message]())
     }
 
     "return one element if one message arrived" in {
-      val tail = system.actorOf(Props(new Tail(1)))
+      val tail = system.actorOf(Props(new Tail("id", 1)))
       tail ! Message.empty
       val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
       assert(result == List[Message](Message.empty))
     }
 
     "return at most backlogsize elements" in {
-      val tail = system.actorOf(Props(new Tail(1)))
+      val tail = system.actorOf(Props(new Tail("id", 1)))
       tail ! Message.empty
       tail ! Message.empty
       val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
@@ -187,26 +187,26 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   "FieldStats" must {
     implicit val timeout = Timeout(1000 millis)
     "return empty map when no message arrived" in {
-      val stats = system.actorOf(Props(new FieldStatistics("test")))
+      val stats = system.actorOf(Props(new FieldStatistics("id", "test")))
       val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
       assert(result == Map[String, Integer]())
     }
 
     "return empty map when non-matching message arrived" in {
-      val stats = system.actorOf(Props(new FieldStatistics("test")))
+      val stats = system.actorOf(Props(new FieldStatistics("id", "test")))
       stats ! Message.withMessage("almafa")
       val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
       assert(result == Map[String, Integer]())
     }
     "return filled map when matching message arrived" in {
-      val stats = system.actorOf(Props(new FieldStatistics("MESSAGE")))
+      val stats = system.actorOf(Props(new FieldStatistics("id", "MESSAGE")))
       stats ! Message.withMessage("almafa")
       val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
       assert(result == Map[String, Integer]("almafa" -> 1))
 
     }
     "return filled map when two matching messages arrived" in {
-      val stats = system.actorOf(Props(new FieldStatistics("MESSAGE")))
+      val stats = system.actorOf(Props(new FieldStatistics("id", "MESSAGE")))
       stats ! Message.withMessage("almafa")
       stats ! Message.withMessage("almafa")
       val result = Await.result(stats ? Query, timeout.duration).asInstanceOf[Map[String, Integer]]
@@ -216,4 +216,35 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 
   }
 
+}
+
+class TestShutDown(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
+  with WordSpecLike with MustMatchers with BeforeAndAfterAll {
+
+  def this() = this(ActorSystem("HyperionTest3"))
+
+  override def afterAll {
+    _system.shutdown()
+  }
+
+  "TestShutDown" must {
+    implicit val timeout = Timeout(1000 millis)
+    "wait until all shutdown message arrived" in {
+      val tail = system.actorOf(Props(new Tail("id", 10)))
+      tail ! Message.empty
+      val result = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+      assert(result == List[Message](Message.empty))
+      tail ! PipeShutdown(List("alma"))
+      val result2 = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+      assert(result2 == List[Message](Message.empty))
+      tail ! Disconnected("alma")
+      try {
+        val result3 = Await.result(tail ? Query, timeout.duration).asInstanceOf[List[Message]]
+        fail()
+      } catch {
+        case _ : java.util.concurrent.TimeoutException =>
+      }
+
+    }
+  }
 }

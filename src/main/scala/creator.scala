@@ -45,43 +45,43 @@ package hyperion {
 
     def construct(id: String, options: PipeOptions, system: ActorSystem): Unit = {
       options.typeName match {
-        case "printer" => system.actorOf(Props(new Printer), nameFromId(id))
+        case "printer" => system.actorOf(Props(new Printer(id)), nameFromId(id))
         case "source" => {
           val port: Int = options.options("port").toInt
-          val parser = system.actorOf(Props(new SyslogParser), nameFromId(id))
-          system.actorOf(Props(new ServerActor(parser, port)))
+          val parser = system.actorOf(Props(new SyslogParser(id, port)), nameFromId(id))
+
         }
-        case "counter" => system.actorOf(Props(new MessageCounter), nameFromId(id))
+        case "counter" => system.actorOf(Props(new MessageCounter(id)), nameFromId(id))
         case "rewrite" => {
           val fieldName = options.options("fieldname")
           val matchExpression = options.options("matchexpr")
           val substitutionValue = options.options("substvalue")
-          system.actorOf(Props(new Rewrite(fieldName, matchExpression, substitutionValue)), nameFromId(id))
+          system.actorOf(Props(new Rewrite(id, fieldName, matchExpression, substitutionValue)), nameFromId(id))
         }
         case "averageCounter" => {
           val counterName = options.options("counter")
           val counter = system.actorSelection(pathForPipe(counterName))
           val backlogSize: Int = options.options("backlog").toInt
-          val averageCounter = system.actorOf(Props(new AverageCounter(counter, 1 seconds, backlogSize)), nameFromId(id))
+          val averageCounter = system.actorOf(Props(new AverageCounter(id, counter, 1 seconds, backlogSize)), nameFromId(id))
         }
         case "filter" => {
           val fieldName = options.options("fieldname")
           val matchExpression = options.options("matchexpr")
-          system.actorOf(Props(new Filter(fieldName, matchExpression)), nameFromId(id))
+          system.actorOf(Props(new Filter(id, fieldName, matchExpression)), nameFromId(id))
         }
         case "tail" => {
           val backlogSize: Int = options.options("backlog").toInt
-          system.actorOf(Props(new Tail(backlogSize)), nameFromId(id))
+          system.actorOf(Props(new Tail(id, backlogSize)), nameFromId(id))
         }
         case "stats" => {
           val fieldName = options.options("fieldname")
-          system.actorOf(Props(new FieldStatistics(fieldName)), nameFromId(id))
+          system.actorOf(Props(new FieldStatistics(id, fieldName)), nameFromId(id))
         }
 
         case "filewriter" => {
           val fileName = options.options("filename")
           val template = options.options("template")
-          system.actorOf(Props(new FileDestination(fileName, template)), nameFromId(id))
+          system.actorOf(Props(new FileDestination(id, fileName, template)), nameFromId(id))
         }
       }
     }
@@ -174,13 +174,28 @@ package hyperion {
       addingConnections map { (connection) => {
         Registry.connect(connection.from, connection.to)
       }}
+      removableConnections map { (connection) => {
+        Registry.disconnect(connection.from, connection.to)
+      }}
+    }
+
+    def updateNodes(nodes: List[NodeProperty]) = {
+      val currentNodeIds = Registry.nodes.keys.toSet
+      val nextNodeIds = (nodes map {(node) => node.id}).toSet;
+      val removableNodes = currentNodeIds.diff(nextNodeIds)
+      removableNodes map {(node) => {
+        val pipe = system.actorSelection(pathForPipe(node))
+        pipe ! PipeShutdown(List())
+        Registry.removeNode(node)
+      }}
+      nodes map ((node) => create(node) )
     }
 
     def uploadConfig(config: Config) = {
       Try {
         println("Config:" + config)
         validateConfig(config)
-        config.nodes map ((node) => create(node) )
+        updateNodes(config.nodes)
         updateConnections(config.connections)
         None
       }

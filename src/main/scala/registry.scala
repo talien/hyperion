@@ -18,6 +18,8 @@ package hyperion {
 
         def hasConnection(connection: Connection) = connections.contains(connection)
 
+        def removeNode(id: String) = nodes.remove(id)
+
         def getNodesAsList = nodes.values.toList
 
         def config = Config(getNodesAsList, connections.toList)

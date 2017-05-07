@@ -29,10 +29,19 @@ package hyperion {
 
   case class Tick()
 
+  case class PipeShutdown(ids: List[String])
+
+  case class Disconnected(id: String)
+
   abstract class Pipe extends Actor with ActorLogging
     //with RequiresMessageQueue[BoundedMessageQueueSemantics] {
   {
+    def selfId : String
     val nextPipes = scala.collection.mutable.HashMap.empty[String,ActorSelection]
+    val disconnected = scala.collection.mutable.ListBuffer.empty[String]
+    val shutdownList = scala.collection.mutable.ListBuffer.empty[String]
+
+    def pipeShutDownhook() = {}
 
     def receiveControl: PartialFunction[Any, Unit] = {
       case PipeConnectionUpdate(add, remove) => {
@@ -40,8 +49,25 @@ package hyperion {
           nextPipes.put(id, pipe)
         }
         remove map {(id) => {
+          nextPipes.get(id).get ! Disconnected(selfId)
           nextPipes.remove(id)
         }}
+      }
+
+      case Disconnected(id) => {
+        disconnected += id
+        if (shutdownList.length == disconnected.length) {
+          pipeShutDownhook()
+          context.stop(self)
+        }
+      }
+
+      case PipeShutdown(fromPipes) => {
+        shutdownList ++= fromPipes
+        if (shutdownList.length == disconnected.length) {
+          pipeShutDownhook()
+          context.stop(self)
+        }
       }
     }
 
@@ -61,20 +87,23 @@ package hyperion {
       }
   }
 
-  class Printer extends Pipe {
+  class Printer(id: String) extends Pipe {
+    def selfId = id
     def process = {
       case Message(data) => println(data("MESSAGE"))
     }
   }
 
-  class Filter(name: String, value: String) extends Pipe {
+  class Filter(id:String, name: String, value: String) extends Pipe {
+    def selfId = id
     def process = {
       case Message(data) =>
         if (data.contains(name) && data(name).matches(value)) propagateMessage(Message(data))
     }
   }
 
-  class Rewrite(name: String, regexp: String, value: String) extends Pipe {
+  class Rewrite(id:String, name: String, regexp: String, value: String) extends Pipe {
+    def selfId = id
     def process = {
       case Message(data) =>
         if (data.contains(name)) propagateMessage(
@@ -100,19 +129,22 @@ package hyperion {
     def count(data: Map[String, String])
   }
 
-  class MessageCounter extends Counter {
+  class MessageCounter(id:String) extends Counter {
+    def selfId = id
     def count(data: Map[String, String]) = {
       counter = counter + 1
     }
   }
 
-  class FieldValueCounter(name: String, value: String) extends Counter {
+  class FieldValueCounter(id:String, name: String, value: String) extends Counter {
+    def selfId = id
     def count(data: Map[String, String]) = {
       if (data.contains(name) && data(name).matches(value)) counter = counter + 1
     }
   }
 
-  class FieldStatistics(name: String) extends Pipe {
+  class FieldStatistics(id: String, name: String) extends Pipe {
+    def selfId = id
     val stats: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map[String, Int]()
 
     def process = {
@@ -127,8 +159,9 @@ package hyperion {
     }
   }
 
-  class AverageCounter(counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor with ActorLogging {
+  class AverageCounter(id: String, counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor with ActorLogging {
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
+    def selfId = id
     var backlog = List[Int]()
     var cancellable: Any = Nil
     var lastData = 0
@@ -158,7 +191,8 @@ package hyperion {
     override def postStop = cancellable.asInstanceOf[akka.actor.Cancellable].cancel
   }
 
-  class Tail(backlogSize: Int) extends Pipe {
+  class Tail(id: String, backlogSize: Int) extends Pipe {
+    def selfId = id
     var messageList = List[Message]()
 
     def process = {
@@ -167,7 +201,8 @@ package hyperion {
     }
   }
 
-  class FileDestination(fileName: String, template: String) extends Pipe {
+  class FileDestination(id: String, fileName: String, template: String) extends Pipe {
+    def selfId = id
     val writer = new BufferedWriter(new OutputStreamWriter(
       new FileOutputStream(fileName), "utf-8"))
     var cancellable: Any = Nil
@@ -205,7 +240,8 @@ package hyperion {
     }
   }
 
-  class NoParser extends Pipe {
+  class NoParser(id: String) extends Pipe {
+    def selfId = id
     def process = {
       case LogLine(line) => {
         propagateMessage(Message.withMessage(line))
@@ -214,8 +250,9 @@ package hyperion {
     }
   }
 
-  class SyslogParser extends Pipe {
-
+  class SyslogParser(id: String, port: Int) extends Pipe {
+    def selfId = id
+    val serverActor = context.system.actorOf(Props(new ServerActor(self, port)))
     def process = {
       case LogLine(line) => {
         try {
@@ -233,6 +270,10 @@ package hyperion {
       propagateMessage(Message(data))
     }
 
+    override def pipeShutDownhook() {
+      serverActor ! Terminate
+    }
+
   }
 
   class ServerActor (parser: ActorRef, port: Int) extends Actor {
@@ -246,6 +287,9 @@ package hyperion {
         val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser)))
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
         listener ! ResumeAccepting(batchSize = 1)
+      case Terminate =>
+        listener ! Unbind
+        context.stop(self)
     }
 
     def receive = {
