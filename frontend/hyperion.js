@@ -177,6 +177,9 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
       },
       propertyFilter: function(name, context) {
         return ((name.slice(0, 1) !== '$') && (name.slice(0, 1) !== '_'));
+      },
+      objectHash: function(obj) {
+        return obj._id || obj.id;
       }
   });
 
@@ -193,6 +196,11 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
     item.id = uuid.v4();
     this.add(item);
   };
+
+  this.removeItemByID = function(id) {
+    this.items = this.items.filter((item ) => (item.id !== id));
+    this.connections = this.connections.filter((item) => ((item.from !== id) && (item.to !== id)));
+  }
 
   this.getItemWithID = function (id) {
     var result = null;
@@ -236,7 +244,6 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
     var that = this;
     connections.forEach(function (connection) {
       if (!that.isConnected(connection)) {
-        console.log(connection);
         that.connectWithPending(connection.from, connection.to, false)
       }
     });
@@ -299,7 +306,6 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
           connections : this.connections
         }
         var delta = this.differ.diff(serverConfig, config);
-        console.log(delta);
         return { diff:delta, config:serverConfig };
     });
   }
@@ -440,9 +446,21 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   GraphService.load($scope);
 });
 
-hyperionApp.directive("hyperionNode", function () {
+hyperionApp.directive("hyperionNode", function (GraphService, ContextService) {
   function link(scope, element, attrs) {
     jsPlumb.draggable(element, {containment: "#landscape"})
+
+    scope.remove = function($event) {
+      GraphService.removeItemByID(scope.item.id);
+      $event.stopPropagation();
+      jsPlumb.remove(element[0].id);
+    }
+
+    scope.connect = function($event) {
+      ContextService.connecting = true;
+      ContextService.onElementClicked(element[0], GraphService);
+      $event.stopPropagation();
+    }
   };
   return {
     replace: true,

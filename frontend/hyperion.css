@@ -12,10 +12,18 @@
 
 .node-name {
     font-size: 130%;
+    width: 80%;
 }
 
 .node-type {
     font-size: 100%;
+     width: 80%;
+}
+
+.node-button {
+    position: absolute;
+    right: 15px;
+    top: 10px;
 }
 
 .node:hover {
@@ -81,4 +89,8 @@
 
 .capitalize {
    text-transform: capitalize;
+}
+
+.node-button {
+    cursor: pointer;
 }

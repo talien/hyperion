@@ -90,9 +90,14 @@
 
     <div id="landscape" class="landscape" ng-click="containerClicked($event)">
         <div id="{{item.id}}" class="node" hyperion-node ng-repeat="item in items"
-             ng-style="{'top': item.top, 'left': item.left }" ng-click="elementClicked($event)">
+             ng-style="{'top': item.top, 'left': item.left }" ng-click="elementClicked($event)" ng-init="showbuttons = false" ng-mouseover="showbuttons = true" ng-mouseleave="showbuttons = false">
             <div class="node-name">{{item.content.name}}</div>
             <div class="node-type">{{item.content.typeName}}</div>
+            <div class="pull-right node-button" ng-show="showbuttons">
+            <div class="node-icon" uib-popover="Remove node" popover-trigger="'mouseenter'" ng-click="remove($event)"><span class="glyphicon glyphicon-remove"></span></div>
+            <div class="node-icon" uib-popover="Connect node" popover-trigger="'mouseenter'" ng-click="connect($event)"><span class="glyphicon glyphicon-flash"></span></div>
+            <div class="node-icon" uib-popover="Disconnect node" popover-trigger="'mouseenter'"><span class="glyphicon glyphicon-ban-circle"></span></div>
+            </div>
         </div>
     </div>
 </div>
