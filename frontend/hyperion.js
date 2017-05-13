@@ -59,7 +59,6 @@ hyperionApp.service('ContextService', function() {
   this.selected = false;
   this.connecting = false;
   this.firstItem = false;
-  this.secondItem = false;
 
   this.nodeProperties = {
     name: "",
@@ -124,17 +123,17 @@ hyperionApp.service('ContextService', function() {
   }
 
   this.deselect = function () {
+    this.stopConnect();
     this.selected = false;
   }
 
-  this.startConnect = function () {
-    this.connecting = true;
+  this.startConnect = function (connectType) {
+    this.connecting = connectType;
   }
 
   this.stopConnect = function () {
     this.connecting = false;
     this.firstItem = false;
-    this.secondItem = false;
   }
 
   this.onElementClicked = function (element, graph) {
@@ -142,9 +141,13 @@ hyperionApp.service('ContextService', function() {
       if (this.firstItem === false) {
         this.firstItem = element.id;
       } else {
-        this.secondItem = element.id;
-        graph.connect(this.firstItem, this.secondItem);
-        this.stopConnect();
+        if (this.connecting === "connect") {
+          graph.connect(this.firstItem, element.id);
+          this.stopConnect();
+        } else {
+          graph.disconnect(this.firstItem, element.id);
+          this.stopConnect();
+        }
       }
     } else {
       this.select(graph, element);
@@ -170,6 +173,7 @@ hyperionApp.service('HyperionBackend', function($http) {
 hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
   this.items = [];
   this.connections = [];
+  this.plumberConnections = [];
   this.differ = jsondiffpatch.create({
       arrays: {
         detectMove: true,
@@ -272,7 +276,7 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
   };
 
   this.connectNodes = function (from, to) {
-    jsPlumb.connect({
+    const connection = jsPlumb.connect({
       source: from,
       target: to,
       connector: ["Straight"],
@@ -281,6 +285,11 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
       ],
       endpoint: "Dot",
       anchor: "Continuous"
+    });
+    this.plumberConnections.push({
+      from: from,
+      to: to,
+      connection: connection
     });
   };
 
@@ -309,6 +318,21 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
         return { diff:delta, config:serverConfig };
     });
   }
+
+  this.disconnect = function(from, to) {
+    this.connections = this.connections.filter((item) => ((item.from !== from) || (item.to !== to)));
+    let removeableConnection;
+    let newPlumberConnections = []; 
+    this.plumberConnections.forEach((item) => {
+      if ((item.from === from) && (item.to === to)) {
+        removeableConnection = item;
+      } else {
+        newPlumberConnections.push(item);
+      }
+    });
+    this.plumberConnections = newPlumberConnections;
+    jsPlumb.detach(removeableConnection.connection);
+  };
 
 });
 
@@ -391,7 +415,7 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   $scope.context = ContextService;
 
   $scope.connectClicked = function () {
-    ContextService.connecting = true;
+    ContextService.startConnect("connect");
   }
 
   $scope.elementClicked = function ($event) {
@@ -457,10 +481,17 @@ hyperionApp.directive("hyperionNode", function (GraphService, ContextService) {
     }
 
     scope.connect = function($event) {
-      ContextService.connecting = true;
+      ContextService.startConnect("connect");
       ContextService.onElementClicked(element[0], GraphService);
       $event.stopPropagation();
     }
+
+    scope.disconnect = function($event) {
+      ContextService.startConnect("disconnect");
+      ContextService.onElementClicked(element[0], GraphService);
+      $event.stopPropagation();
+    }
+
   };
   return {
     replace: true,
