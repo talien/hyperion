@@ -10,6 +10,10 @@ package hyperion {
 	  
 	  def apply(name: String) = nvpairs(name)
 	}
+
+	trait MessageParser {
+		def apply(message: String) : Message
+	}
 	
 	object Message {
 	  
@@ -21,8 +25,12 @@ package hyperion {
   object parseJsonMessage {
 
   }
+
+	object parseNoParser extends MessageParser{
+		def apply(message: String) = Message.withMessage(message)
+	}
 		
-	object parseSyslogMessage {
+	object parseSyslogMessage extends MessageParser {
 	   val dateformatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss")
 	   val dateformatterv2 = DateTimeFormat.forPattern("MMM dd HH:mm:ss")
 	   val dateformatterv3 = DateTimeFormat.forPattern("MMM  d HH:mm:ss")
@@ -35,7 +43,7 @@ package hyperion {
 	   val programregexp = "([^ \\[]*)(\\[[^\\]]+\\])*:* (.*)".r
 	
 	   def apply(message: String) = {
-			 parsePrio(message)
+			 Message(parsePrio(message))
 		 }
 	   
 	   def parsePrio(message: String) =

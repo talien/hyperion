@@ -17,8 +17,6 @@ import java.io._
 
 package hyperion {
 
-  case class LogLine(line: String)
-
   case class Terminate()
 
   case class PipeConnectionUpdate(add: Map[String, ActorSelection], remove: List[String])
@@ -240,34 +238,20 @@ package hyperion {
     }
   }
 
-  class NoParser(id: String) extends Pipe {
-    def selfId = id
-    def process = {
-      case LogLine(line) => {
-        propagateMessage(Message.withMessage(line))
-        sender ! Ack
-      }
-    }
-  }
-
   class SyslogParser(id: String, port: Int) extends Pipe {
     def selfId = id
-    val serverActor = context.system.actorOf(Props(new ServerActor(self, port)))
+    val serverActor = context.system.actorOf(Props(new ServerActor(self, port, parseSyslogMessage)))
     def process = {
-      case LogLine(line) => {
-        try {
-          parse(line)
-        } catch {
-          case e:Exception=>
-            println(line)
-        }
+
+      case msg: Message => {
+        propagateMessage(msg)
         sender ! Ack
       }
     }
 
     def parse(message: String) = {
-      val data = parseSyslogMessage(message)
-      propagateMessage(Message(data))
+      val parsedMessage = parseSyslogMessage(message)
+      propagateMessage(parsedMessage)
     }
 
     override def pipeShutDownhook() {
@@ -276,7 +260,7 @@ package hyperion {
 
   }
 
-  class ServerActor (parser: ActorRef, port: Int) extends Actor {
+  class ServerActor (parser: ActorRef, port: Int, msgParser: MessageParser) extends Actor {
     import context.system
 
     IO(Tcp) ! Tcp.Bind(self, new InetSocketAddress("0.0.0.0", port), pullMode = true)
@@ -284,7 +268,8 @@ package hyperion {
     def listening(listener: ActorRef): Receive = {
       case Connected(remote, local) =>
         val connection = sender()
-        val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser)))
+        val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)))
+
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
         listener ! ResumeAccepting(batchSize = 1)
       case Terminate =>
@@ -303,7 +288,7 @@ package hyperion {
   }
   case object Ack extends Event
 
-  class ReceiverActor(remote: InetSocketAddress, connection: ActorRef, parser: ActorRef) extends Actor with ActorLogging {
+  class ReceiverActor(remote: InetSocketAddress, connection: ActorRef, parser: ActorRef, msgParser: MessageParser) extends Actor with ActorLogging {
     val LF = ByteString("\n")
     var data_buffer = ByteString()
     var sent_message = 0
@@ -317,7 +302,7 @@ package hyperion {
           {
             val message = buffer.slice(0, endline).utf8String
             //log.info("Message: " + message+";");
-            parser ! LogLine(message)
+            parser ! msgParser(message)
             sent_message += 1
             processed_message += 1
             parseLines(buffer.slice(endline + 1, buffer.length))
