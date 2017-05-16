@@ -5,6 +5,8 @@ import akka.testkit._
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
+import java.io._
+import java.net._
 
 import scala.concurrent.duration._
 import scala.util._
@@ -215,7 +217,23 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
 
   }
-
+   
+  "TcpSource" must {
+    "be able to work" in {
+      val actor = system.actorOf(Props(new SyslogParser("source", 11111)), "id")
+      val probe1 = TestProbe()
+      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path))),List())
+      Thread.sleep(100)
+      val skt = new Socket("localhost", 11111);
+      val out = new PrintWriter(skt.getOutputStream());
+      out.print("<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD\n")
+      out.close();
+      skt.close();
+      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
+      probe1.expectMsg(1000 millis, expected)
+      actor ! PipeShutdown(List())
+     }
+  }
 }
 
 class TestShutDown(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
