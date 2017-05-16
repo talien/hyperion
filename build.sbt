@@ -23,6 +23,8 @@ libraryDependencies += "io.spray" %% "spray-routing" % "1.3.3"
 
 libraryDependencies += "io.spray" %% "spray-json" % "1.3.2"
 
+libraryDependencies += "net.liftweb" %% "lift-json" % "2.6.2"
+
 scalaSource in Test <<= baseDirectory(_ / "test")
 
 assemblySettings

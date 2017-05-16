@@ -1,5 +1,6 @@
 import com.github.nscala_time.time.Imports._
 import scala.util.Try
+import net.liftweb.json.JsonParser._
 
 package hyperion {
     case class Message(nvpairs: Map[String, String])
@@ -22,8 +23,22 @@ package hyperion {
       def withMessage(value:String) = empty.withMessage(value)
     }
 
-  object parseJsonMessage {
+  object parseJsonMessage extends MessageParser {
+		def apply(message: String) = {
+			val parser = (p: Parser) => {
+				def parse(message: Message): Message = p.nextToken match {
+					case FieldStart(fieldname) => p.nextToken match {
+						case StringVal(str) => parse(message.set(fieldname, str))
+					}
+					case End => message
+					case _ => parse(message)
+				}
 
+				parse(Message.empty)
+			}
+
+			parse(message, parser)
+		}
   }
 
 	object parseNoParser extends MessageParser{

@@ -1,5 +1,5 @@
 import com.github.nscala_time.time.Imports._
-import hyperion.parseSyslogMessage
+import hyperion.{parseSyslogMessage, parseJsonMessage}
 import org.scalatest.FlatSpec
 
 /**
@@ -35,6 +35,23 @@ class TestMessage extends FlatSpec {
     assert(result("MESSAGE") == "Successfully called chroot().")
   }
 
+}
+
+class TestMessageJson extends FlatSpec {
+  it should "be able to parse JSON with one field" in {
+    val line = "{\"alma\":\"korte\"}"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma") == "korte")
+  }
+
+  it should "be able to parse JSON with two fields" in {
+    val line = "{\"alma\":\"korte\", \"alma2\":\"citrom\"}"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma") == "korte")
+    assert(result("alma2") == "citrom")
+  }
 }
 
 class TestMessageParsePerformance extends FlatSpec {
