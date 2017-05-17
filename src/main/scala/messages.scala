@@ -23,18 +23,46 @@ package hyperion {
       def withMessage(value:String) = empty.withMessage(value)
     }
 
+	case class JsonParserContext(fieldSeparators: List[Int], prefix: String)
+	{
+		def extendPrefix(field: String) = {
+			if (prefix == "") {
+				JsonParserContext(List[Int](), field + ".")
+			}	else {
+				if (fieldSeparators.length == 0) {
+					JsonParserContext(List[Int](prefix.length), prefix + field + ".")
+				} else {
+					JsonParserContext(fieldSeparators.head + field.length :: fieldSeparators, prefix + field + ".")
+				}
+			}
+		}
+
+		def removePrefix = {
+			fieldSeparators.length match {
+				case 0 => JsonParserContext(List[Int](), "")
+				case 1 => JsonParserContext(List[Int](), prefix.substring(0, fieldSeparators.head))
+				case _ => JsonParserContext(fieldSeparators.tail, prefix.substring(0, fieldSeparators.head))
+			}
+		}
+	}
+
   object parseJsonMessage extends MessageParser {
 		def apply(message: String) = {
 			val parser = (p: Parser) => {
-				def parse(message: Message): Message = p.nextToken match {
+				def parse(context :JsonParserContext, message: Message): Message = p.nextToken match {
 					case FieldStart(fieldname) => p.nextToken match {
-						case StringVal(str) => parse(message.set(fieldname, str))
+						case StringVal(str) => parse(context, message.set(context.prefix + fieldname, str))
+						case IntVal(int) => parse(context, message.set(context.prefix + fieldname, int.toString()))
+						case BoolVal(bool) => parse(context, message.set(context.prefix + fieldname, bool.toString()))
+						case DoubleVal(double) => parse(context, message.set(context.prefix + fieldname, double.toString()))
+						case OpenObj => parse(context.extendPrefix(fieldname), message)
 					}
+					case CloseObj => parse(context.removePrefix, message)
 					case End => message
-					case _ => parse(message)
+					case _ => parse(context, message)
 				}
 
-				parse(Message.empty)
+				parse(JsonParserContext(List[Int](), ""), Message.empty)
 			}
 
 			parse(message, parser)

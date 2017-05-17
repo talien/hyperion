@@ -52,8 +52,45 @@ class TestMessageJson extends FlatSpec {
     assert(result("alma") == "korte")
     assert(result("alma2") == "citrom")
   }
+
+  it should "be able to parse JSON with nested objects" in {
+    val line = "{\"alma\":\"korte\", \"alma2\": { \"barack\" : \"citrom\"} }"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma") == "korte")
+    assert(result("alma2.barack") == "citrom")
+  }
+
+  it should "be able to parse JSON with two nested objects" in {
+    val line = "{\"alma2\": { \"barack\" : \"citrom\"}, \"alma\": { \"barack\" : \"korte\" , \"banan\":\"szilva\"} }"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma.barack") == "korte")
+    assert(result("alma2.barack") == "citrom")
+    assert(result("alma.banan") == "szilva")
+  }
+
+  it should "be able to parse JSON with different types" in {
+    val line = "{\"alma\":1, \"alma2\":true, \"alma3\": 1.1}"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma") == "1")
+    assert(result("alma2") == "true")
+    assert(result("alma3") == "1.1")
+  }
 }
 
+class TestMessageJsonPerformance extends FlatSpec {
+  it should "be fast" in {
+    val line = "{\"TAGS\":\".source.s_unix\",\"SOURCEIP\":\"127.0.0.1\",\"PROGRAM\":\"talien\",\"PRIORITY\":\"notice\",\"MESSAGE\":\"kakukk\",\"LEGACY_MSGHDR\":\"talien: \",\"HOST_FROM\":\"ubu1\",\"HOST\":\"ubu1\",\"FACILITY\":\"kern\",\"DATE\":\"May 17 23:38:23\"}"
+    val start = DateTime.now.getMillis
+    for( a <- 1 to 100000) {
+      val result = parseJsonMessage(line)
+    }
+    val end = DateTime.now.getMillis
+    println(end - start)
+  }
+}
 class TestMessageParsePerformance extends FlatSpec {
   it should "be fast" in {
     val line = "<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD"
