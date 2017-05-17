@@ -220,9 +220,9 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
    
   "TcpSource" must {
     "be able to work" in {
-      val actor = system.actorOf(Props(new TcpSource("source", 11111)), "id")
+      val actor = system.actorOf(Props(new TcpSource("source", 11111, "syslog")), "id")
       val probe1 = TestProbe()
-      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path))),List())
+      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
       Thread.sleep(100)
       val skt = new Socket("localhost", 11111);
       val out = new PrintWriter(skt.getOutputStream());

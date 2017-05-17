@@ -238,9 +238,14 @@ package hyperion {
     }
   }
 
-  class TcpSource(id: String, port: Int) extends Pipe {
+  class TcpSource(id: String, port: Int, parser: String) extends Pipe {
     def selfId = id
-    val serverActor = context.system.actorOf(Props(new ServerActor(self, port, parseSyslogMessage)))
+    val logParser : MessageParser= parser match {
+      case "syslog" => parseSyslogMessage
+      case "json" => parseJsonMessage
+      case "raw" => parseNoParser
+    }
+    val serverActor = context.system.actorOf(Props(new ServerActor(self, port, logParser)))
     def process = {
 
       case msg: Message => {
