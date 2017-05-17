@@ -238,7 +238,7 @@ package hyperion {
     }
   }
 
-  class SyslogParser(id: String, port: Int) extends Pipe {
+  class TcpSource(id: String, port: Int) extends Pipe {
     def selfId = id
     val serverActor = context.system.actorOf(Props(new ServerActor(self, port, parseSyslogMessage)))
     def process = {
