@@ -54,7 +54,7 @@ function clone(o) {
   return out;
 }
 
-hyperionApp.service('ContextService', function() {
+hyperionApp.service('ContextService', function(GraphService) {
   this.adding = false;
   this.selected = false;
   this.connecting = false;
@@ -74,14 +74,14 @@ hyperionApp.service('ContextService', function() {
     this.adding = true;
   };
 
-  this.stopAdd = function (items, event) {
+  this.stopAdd = function (event) {
     if ((this.nodeProperties.name) && (this.nodeProperties.selectedType.id)) {
       this.adding = false;
       var optionsClone = null;
       if (this.nodeProperties.hasOptions) {
         optionsClone = clone(this.nodeProperties.selectedOptions);
       }
-      items.addNew({
+      GraphService.addNew({
         left: event.originalEvent.layerX,
         top: event.originalEvent.layerY,
         content: {
@@ -114,9 +114,9 @@ hyperionApp.service('ContextService', function() {
     this.setOptionsFor(this.nodeProperties.selectedType.id)
   };
 
-  this.select = function (graph, element) {
+  this.select = function (element) {
     this.selected = true;
-    item = graph.getItemWithID(element.id);
+    item = GraphService.getItemWithID(element.id);
     item.left = element.offsetLeft;
     item.top = element.offsetTop;
     this.nodeProperties.selectedItem = item;
@@ -136,23 +136,33 @@ hyperionApp.service('ContextService', function() {
     this.firstItem = false;
   }
 
-  this.onElementClicked = function (element, graph) {
+  this.onElementClicked = function (element) {
     if (this.connecting) {
       if (this.firstItem === false) {
         this.firstItem = element.id;
       } else {
         if (this.connecting === "connect") {
-          graph.connect(this.firstItem, element.id);
+          GraphService.connect(this.firstItem, element.id);
           this.stopConnect();
         } else {
-          graph.disconnect(this.firstItem, element.id);
+          GraphService.disconnect(this.firstItem, element.id);
           this.stopConnect();
         }
       }
     } else {
-      this.select(graph, element);
+      this.select(element);
     }
   };
+  
+  this.onContainerClicked = function($event) {
+    if (this.adding) {
+      this.stopAdd($event)
+    } else {
+      if (this.selected) {
+        this.deselect()
+      }
+    }
+  }
 });
 
 hyperionApp.service('HyperionBackend', function($http) {
@@ -419,7 +429,7 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   }
 
   $scope.elementClicked = function ($event) {
-    ContextService.onElementClicked($event.currentTarget, GraphService);
+    ContextService.onElementClicked($event.currentTarget);
     $event.stopPropagation();
   }
 
@@ -428,14 +438,8 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   }
 
   $scope.containerClicked = function ($event) {
-    if (ContextService.adding) {
-      ContextService.stopAdd(GraphService, $event)
-    } else {
-      if (ContextService.selected) {
-        ContextService.deselect()
-      }
-    }
-  }
+    ContextService.onContainerClicked($event);
+  };
 
   $scope.commitClicked = function () {
     var errorhandler = function (message) {
