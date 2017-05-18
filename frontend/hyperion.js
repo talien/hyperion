@@ -321,8 +321,8 @@ hyperionApp.service('GraphService', function (uuid, HyperionBackend) {
 
   this.disconnect = function(from, to) {
     this.connections = this.connections.filter((item) => ((item.from !== from) || (item.to !== to)));
-    let removeableConnection;
-    let newPlumberConnections = []; 
+    var removeableConnection;
+    var newPlumberConnections = []; 
     this.plumberConnections.forEach((item) => {
       if ((item.from === from) && (item.to === to)) {
         removeableConnection = item;
