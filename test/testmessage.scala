@@ -70,6 +70,16 @@ class TestMessageJson extends FlatSpec {
     assert(result("alma.banan") == "szilva")
   }
 
+  it should "be able to parse JSON with several levels of objects" in {
+    val line = "{\"alma\": { \"barack\" : { \"citrom\": { \"korte\": \"value1\"}, \"citrom2\":\"value2\" }, \"barack2\": \"value3\"}, \"alma2\":\"value4\"}"
+    val result = parseJsonMessage(line)
+    println(result)
+    assert(result("alma.barack.citrom.korte") == "value1")
+    assert(result("alma.barack.citrom2") == "value2")
+    assert(result("alma.barack2") == "value3")
+    assert(result("alma2") == "value4")
+  }
+
   it should "be able to parse JSON with different types" in {
     val line = "{\"alma\":1, \"alma2\":true, \"alma3\": 1.1}"
     val result = parseJsonMessage(line)

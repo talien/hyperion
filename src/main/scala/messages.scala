@@ -32,7 +32,7 @@ package hyperion {
 				if (fieldSeparators.length == 0) {
 					JsonParserContext(List[Int](prefix.length), prefix + field + ".")
 				} else {
-					JsonParserContext(fieldSeparators.head + field.length :: fieldSeparators, prefix + field + ".")
+					JsonParserContext(fieldSeparators.head + field.length  + 1:: fieldSeparators, prefix + field + ".")
 				}
 			}
 		}
