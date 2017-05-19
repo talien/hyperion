@@ -45,6 +45,14 @@ const nodeTypes = [{
     filename: "",
     template: ""
   }
+}, {
+  id: "parser",
+  name: "Parser Node",
+  options: {
+    prefix: "",
+    field: "",
+    parser: ["syslog", "json", "raw"]
+  }
 }];
 
 function clone(o) {

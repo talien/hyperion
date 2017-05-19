@@ -234,6 +234,20 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       actor ! PipeShutdown(List())
      }
   }
+
+  "ParserNode" must {
+    "be able to parse a field" in {
+      val actor = system.actorOf(Props(new ParserNode("id", "MESSAGE", "syslog", "")), "id")
+      val msg = Message.withMessage("<38>2013-11-11T01:01:31 localhost prg00000[1234]: msgpart")
+      val probe1 = TestProbe()
+      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(100)
+      actor ! msg
+      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "msgpart", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
+      probe1.expectMsg(1000 millis, expected)
+      actor ! PipeShutdown(List())
+    }
+  }
 }
 
 class TestShutDown(_system: ActorSystem) extends TestKit(_system) with ImplicitSender

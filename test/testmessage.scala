@@ -1,5 +1,6 @@
 import com.github.nscala_time.time.Imports._
 import hyperion.{parseSyslogMessage, parseJsonMessage}
+import hyperion.Message
 import org.scalatest.FlatSpec
 
 /**
@@ -33,6 +34,13 @@ class TestMessage extends FlatSpec {
     assert(result("PROGRAM") == "avahi-daemon")
     assert(result("PID") == "[26471]")
     assert(result("MESSAGE") == "Successfully called chroot().")
+  }
+
+  it should "be able to merge with other messages" in {
+    val msg = Message(Map("alma" -> "korte"))
+    val result = msg.mergeWithPrefix("banan.", Message(Map("citrom" -> "barack")))
+    assert(result("banan.citrom") == "barack")
+    assert(result("alma") == "korte")
   }
 
 }

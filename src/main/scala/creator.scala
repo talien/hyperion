@@ -55,6 +55,12 @@ package hyperion {
           val tcpsource = system.actorOf(Props(new TcpSource(id, port, parser)), nameFromId(id))
 
         }
+        case "parser" => {
+          val msgField = options.options("field")
+          val parserName = options.options("parser")
+          val prefix = options.options("prefix")
+          val parser = system.actorOf(Props(new ParserNode(id, msgField, parserName, prefix)), nameFromId(id))
+        }
         case "counter" => system.actorOf(Props(new MessageCounter(id)), nameFromId(id))
         case "rewrite" => {
           val fieldName = options.options("fieldname")

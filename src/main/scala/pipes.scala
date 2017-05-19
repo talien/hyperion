@@ -238,13 +238,18 @@ package hyperion {
     }
   }
 
+  class ParserNode(id: String, field: String, parser: String, prefix: String) extends Pipe {
+    def selfId = id
+    val logParser = parserFactory(parser)
+    def process = {
+      case msg : Message => propagateMessage(msg.mergeWithPrefix(prefix, logParser(msg(field))))
+
+    }
+  }
+
   class TcpSource(id: String, port: Int, parser: String) extends Pipe {
     def selfId = id
-    val logParser : MessageParser= parser match {
-      case "syslog" => parseSyslogMessage
-      case "json" => parseJsonMessage
-      case "raw" => parseNoParser
-    }
+    val logParser : MessageParser = parserFactory(parser)
     val serverActor = context.system.actorOf(Props(new ServerActor(self, port, logParser)))
     def process = {
 

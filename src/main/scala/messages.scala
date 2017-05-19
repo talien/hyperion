@@ -10,6 +10,14 @@ package hyperion {
 	  def withMessage(value: String) = set("MESSAGE", value)
 	  
 	  def apply(name: String) = nvpairs(name)
+
+		def mergeWithPrefix(prefix: String, message: Message): Message = {
+			var newNvpairs = nvpairs;
+			message.nvpairs map {case(key, value) => {
+					newNvpairs = newNvpairs.updated(prefix + key, value)
+			}}
+			Message(newNvpairs)
+		}
 	}
 
 	trait MessageParser {
@@ -71,6 +79,14 @@ package hyperion {
 
 	object parseNoParser extends MessageParser{
 		def apply(message: String) = Message.withMessage(message)
+	}
+
+	object parserFactory {
+		def apply(parserName: String) = parserName match {
+			case "syslog" => parseSyslogMessage
+			case "json" => parseJsonMessage
+			case "raw" => parseNoParser
+		}
 	}
 		
 	object parseSyslogMessage extends MessageParser {
