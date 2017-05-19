@@ -4,7 +4,8 @@ const nodeTypes = [{
   id: "source",
   name: "Source",
   options: {
-    port: "0"
+    port: "0",
+    parser: [ "raw", "syslog", "json"]
   }
 }, {
   id: "filter",
@@ -390,22 +391,37 @@ hyperionApp.controller("AddDialogCtrl", function AddDialogCtrl($scope, $uibModal
   $scope.nodeProperties = {
     name: "",
     selectedType: "source",
-    selectedOptions: null,
-    selectedItem: null,
-    types: nodeTypes
+    selectedOptionsView: null,
+    selectedOptionsModel: null,
+    selectedItem: null
   };
+
+  $scope.types = nodeTypes;
 
 
   $scope.cancel = function() {
     $uibModalInstance.close();
   };
+
+  $scope.cloneOptions = function (options) {
+    result = {};
+    for (var key in options) {
+      result[key] = "";
+    }
+    return result;
+  };
+
+  $scope.isOption = function(optionName) {
+    return Array.isArray($scope.nodeProperties.selectedOptionsView[optionName]);
+  }
   
   $scope.setOptionsFor = function (typeName) {
-    $scope.nodeProperties.types.forEach(function (item) {
-      if (item.id === typeName) {
-        if (item.options) {
+    $scope.types.forEach(function (type) {
+      if (type.id === typeName) {
+        if (type.options) {
           $scope.nodeProperties.hasOptions = true;
-          $scope.nodeProperties.selectedOptions = clone(item.options);
+          $scope.nodeProperties.selectedOptionsModel = $scope.cloneOptions(type.options);
+          $scope.nodeProperties.selectedOptionsView = type.options;
         } else {
           $scope.nodeProperties.hasOptions = false;
         }
@@ -422,7 +438,7 @@ hyperionApp.controller("AddDialogCtrl", function AddDialogCtrl($scope, $uibModal
      if (($scope.nodeProperties.name) && ($scope.nodeProperties.selectedType.id)) {
       var optionsClone = null;
       if ($scope.nodeProperties.hasOptions) {
-        optionsClone = clone($scope.nodeProperties.selectedOptions);
+        optionsClone = clone($scope.nodeProperties.selectedOptionsModel);
       }
       GraphService.addNew({
         left: event.originalEvent.layerX,

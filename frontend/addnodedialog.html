@@ -7,15 +7,22 @@
   <div class="form-group">
      <label for="nodetype"> Type:</label>
      <select class="form-control" id="nodeType"
-                        ng-options="nodeType as nodeType.name for nodeType in nodeProperties.types"
+                        ng-options="nodeType as nodeType.name for nodeType in types"
                         ng-model="nodeProperties.selectedType" ng-change="setOptions()"></select>
   </div>
   <div ng-show="nodeProperties.hasOptions">
 
     <div class="form-group"
-        ng-repeat='(optionName, optionValue) in nodeProperties.selectedOptions track by optionName'>
-        <label class="capitalize"> {{optionName}}:</label> <input class="form-control" type='text'
-                                                                              ng-model='nodeProperties.selectedOptions[optionName]'>
+        ng-repeat='(optionName, optionValue) in nodeProperties.selectedOptionsView track by optionName'>
+        <div ng-if="!isOption(optionName)">
+          <label class="capitalize"> {{optionName}}:</label> <input class="form-control" type='text'
+                                                                              ng-model='nodeProperties.selectedOptionsModel[optionName]'>
+        </div>
+        <div ng-if="isOption(optionName)">
+           <label class="capitalize"> {{optionName}}:</label> 
+           <select id="optionsSelect" class="form-control" ng-options="optionItem for optionItem in nodeProperties.selectedOptionsView[optionName]" 
+           ng-model="nodeProperties.selectedOptionsModel[optionName]"></select>
+        </div>
     </div>
   </div>
 
