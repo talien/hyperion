@@ -3,7 +3,9 @@ const hyperionApp = angular.module("hyperionApp", ["angular-uuid", "ui.bootstrap
 const nodeTypes = [{
   id: "source",
   name: "Source",
-  options: {port: "0"}
+  options: {
+    port: "0"
+  }
 }, {
   id: "filter",
   name: "Filter",
@@ -54,8 +56,7 @@ function clone(o) {
   return out;
 }
 
-hyperionApp.service('ContextService', function(GraphService) {
-  this.adding = false;
+hyperionApp.service('ContextService', function(GraphService, $uibModal) {
   this.selected = false;
   this.connecting = false;
   this.firstItem = false;
@@ -66,53 +67,24 @@ hyperionApp.service('ContextService', function(GraphService) {
     selectedOptions: null,
     selectedItem: null,
     types: nodeTypes
-  }
-
-
-  this.startAdd = function () {
-    this.deselect();
-    this.adding = true;
   };
 
-  this.stopAdd = function (event) {
-    if ((this.nodeProperties.name) && (this.nodeProperties.selectedType.id)) {
-      this.adding = false;
-      var optionsClone = null;
-      if (this.nodeProperties.hasOptions) {
-        optionsClone = clone(this.nodeProperties.selectedOptions);
-      }
-      GraphService.addNew({
-        left: event.originalEvent.layerX,
-        top: event.originalEvent.layerY,
-        content: {
-          name: this.nodeProperties.name,
-          typeName: this.nodeProperties.selectedType.id,
-          options: optionsClone
-        }
-      });
-      this.nodeProperties.selectedOptions = null;
-      this.nodeProperties.selectedType = "source";
-      this.nodeProperties.selectedItem = null;
-    }
-  };
-
-  this.setOptionsFor = function (typeName) {
-    const that = this;
-    this.nodeProperties.types.forEach(function (item) {
-      if (item.id === typeName) {
-        if (item.options) {
-          that.nodeProperties.hasOptions = true;
-          that.nodeProperties.selectedOptions = clone(item.options);
-        } else {
-          that.nodeProperties.hasOptions = false;
+  this.add = function (event) {
+    var modalInstance = $uibModal.open({
+      ariaLabelledBy: 'modal-title',
+      ariaDescribedBy: 'modal-body',
+      templateUrl: 'addnodedialog.html',
+      controller: 'AddDialogCtrl',
+      controllerAs: '$ctrl',
+      resolve: {
+        event: function () {
+          return event;
         }
       }
     });
+   
   };
 
-  this.setOptions = function () {
-    this.setOptionsFor(this.nodeProperties.selectedType.id)
-  };
 
   this.select = function (element) {
     this.selected = true;
@@ -155,13 +127,8 @@ hyperionApp.service('ContextService', function(GraphService) {
   };
   
   this.onContainerClicked = function($event) {
-    if (this.adding) {
-      this.stopAdd($event)
-    } else {
-      if (this.selected) {
-        this.deselect()
-      }
-    }
+    this.deselect();
+    this.add($event);
   }
 });
 
@@ -418,6 +385,64 @@ hyperionApp.controller("DiffDialogCtrl", function DiffDialogCtrl($scope, GraphSe
 
 });
 
+hyperionApp.controller("AddDialogCtrl", function AddDialogCtrl($scope, $uibModalInstance, GraphService, event) {
+  
+  $scope.nodeProperties = {
+    name: "",
+    selectedType: "source",
+    selectedOptions: null,
+    selectedItem: null,
+    types: nodeTypes
+  };
+
+
+  $scope.cancel = function() {
+    $uibModalInstance.close();
+  };
+  
+  $scope.setOptionsFor = function (typeName) {
+    $scope.nodeProperties.types.forEach(function (item) {
+      if (item.id === typeName) {
+        if (item.options) {
+          $scope.nodeProperties.hasOptions = true;
+          $scope.nodeProperties.selectedOptions = clone(item.options);
+        } else {
+          $scope.nodeProperties.hasOptions = false;
+        }
+      }
+    });
+  };
+
+  $scope.setOptions = function () {
+    $scope.setOptionsFor($scope.nodeProperties.selectedType.id)
+  };
+
+  
+  $scope.add = function() {
+     if (($scope.nodeProperties.name) && ($scope.nodeProperties.selectedType.id)) {
+      var optionsClone = null;
+      if ($scope.nodeProperties.hasOptions) {
+        optionsClone = clone($scope.nodeProperties.selectedOptions);
+      }
+      GraphService.addNew({
+        left: event.originalEvent.layerX,
+        top: event.originalEvent.layerY,
+        content: {
+          name: this.nodeProperties.name,
+          typeName: this.nodeProperties.selectedType.id,
+          options: optionsClone
+        }
+      });
+      $scope.nodeProperties.selectedOptions = null;
+      $scope.nodeProperties.selectedType = "source";
+      $scope.nodeProperties.selectedItem = null;
+    }
+    $uibModalInstance.close();
+  }
+
+});
+
+
 hyperionApp.controller("BoardController", function BoardController($scope, GraphService, ContextService, HyperionBackend, $uibModal) {
   $scope.dashboard = dashboard;
   GraphService.dashboard = dashboard;
@@ -431,10 +456,6 @@ hyperionApp.controller("BoardController", function BoardController($scope, Graph
   $scope.elementClicked = function ($event) {
     ContextService.onElementClicked($event.currentTarget);
     $event.stopPropagation();
-  }
-
-  $scope.addClicked = function () {
-    ContextService.startAdd();
   }
 
   $scope.containerClicked = function ($event) {

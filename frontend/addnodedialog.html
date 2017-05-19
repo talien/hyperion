@@ -1,0 +1,26 @@
+<div class="add-container">
+  <div class="form-group">
+     <label for="nodename"> Name:</label>
+     <input class="form-control" id="nodename" value="{{nodeProperties.name}}"
+                       ng-model="nodeProperties.name"/>
+  </div>
+  <div class="form-group">
+     <label for="nodetype"> Type:</label>
+     <select class="form-control" id="nodeType"
+                        ng-options="nodeType as nodeType.name for nodeType in nodeProperties.types"
+                        ng-model="nodeProperties.selectedType" ng-change="setOptions()"></select>
+  </div>
+  <div ng-show="nodeProperties.hasOptions">
+
+    <div class="form-group"
+        ng-repeat='(optionName, optionValue) in nodeProperties.selectedOptions track by optionName'>
+        <label class="capitalize"> {{optionName}}:</label> <input class="form-control" type='text'
+                                                                              ng-model='nodeProperties.selectedOptions[optionName]'>
+    </div>
+  </div>
+
+    <div class="dialog-buttons">
+        <div class="btn btn-default btn-primary" ng-click="add()">Add</div>
+        <div class="btn btn-default" ng-click="cancel()">Cancel</div>
+    </div>
+</div>

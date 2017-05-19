@@ -94,3 +94,7 @@
 .node-button {
     cursor: pointer;
 }
+
+.add-container {
+    padding: 15px;
+}
