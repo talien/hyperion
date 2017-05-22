@@ -42,6 +42,11 @@ class TestTemplate extends FlatSpec {
     assert(template.format(Message.empty.withMessage("alma")) == "")
   }
 
+  it should "honor escape sequence as terminator of variable" in {
+    val template = new MessageTemplate("$MESSAGE\n")
+    assert(template.format(Message.empty.withMessage("alma")) == "alma\n")
+  }
+
   //FIXME: it will definitely break in a TZ different than GMT + 1
   it should "treat DATE macro specially" in {
     val template = new MessageTemplate("$DATE")
