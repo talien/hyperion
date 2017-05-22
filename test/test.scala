@@ -238,15 +238,15 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 
   "TcpDestination" must {
     "be able to send message to TcpSource" in {
-      val server = system.actorOf(Props(new TcpSource("source", 11111, "syslog")), "sourc1")
-      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE")), "dest1")
+      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "sourc1")
+      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest1")
       val probe1 = TestProbe()
+      Thread.sleep(100)
       server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
-      Thread.sleep(500)
+      Thread.sleep(100)
       val expected = Message.withMessage("alma")
       client ! expected
-      Thread.sleep(500)
-      probe1.expectMsg(1000 millis, expected) 
+      probe1.expectMsg(1000 millis, expected)
     }
   }
 
