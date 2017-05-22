@@ -7,6 +7,7 @@ import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import java.io._
 import java.net._
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration._
 import scala.util._
@@ -15,7 +16,7 @@ import scala.concurrent.Await
 class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
-  def this() = this(ActorSystem("HyperionTest2"))
+  def this() = this(ActorSystem("HyperionTest2", ConfigFactory.load("application.conf") ))
 
   override def afterAll {
     _system.shutdown()
@@ -233,6 +234,20 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       probe1.expectMsg(1000 millis, expected)
       actor ! PipeShutdown(List())
      }
+  }
+
+  "TcpDestination" must {
+    "be able to send message to TcpSource" in {
+      val server = system.actorOf(Props(new TcpSource("source", 11111, "syslog")), "sourc1")
+      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE")), "dest1")
+      val probe1 = TestProbe()
+      server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(500)
+      val expected = Message.withMessage("alma")
+      client ! expected
+      Thread.sleep(500)
+      probe1.expectMsg(1000 millis, expected) 
+    }
   }
 
   "ParserNode" must {
