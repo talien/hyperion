@@ -260,7 +260,7 @@ package hyperion {
     }
   }
 
-  class ClientActor(manager: ActorRef, host: String, port: Int) extends Actor with ActorLogging {
+  class ClientActor(manager: ActorRef, host: String, port: Int) extends Actor with ActorLogging with Stash {
     import context.system
     val socketAddress = new InetSocketAddress(host, port)
 
@@ -275,6 +275,7 @@ package hyperion {
       val connection = sender()
       log.info("Connected")
       connection ! Register(self)
+       unstashAll()
       context become {
         case data: ByteString =>
           log.info("Sending message")
@@ -289,6 +290,8 @@ package hyperion {
           log.info("connection closed")
           context stop self
        }
+
+     case data: ByteString => stash()
      } 
   }
 
