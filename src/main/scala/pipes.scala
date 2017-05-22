@@ -247,6 +247,51 @@ package hyperion {
     }
   }
 
+  class TcpDestination(id: String, host: String, port: Int, template: String) extends Pipe {
+    def selfId = id
+    def clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
+    val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
+
+    def process() = {
+        case m : Message => {
+            log.info("Message received")
+            clientActor ! ByteString(msgTemplate.format(m))
+        }
+    }
+  }
+
+  class ClientActor(manager: ActorRef, host: String, port: Int) extends Actor with ActorLogging {
+    import context.system
+    val socketAddress = new InetSocketAddress(host, port)
+
+    IO(Tcp) ! Connect(socketAddress)
+   
+    def receive = {
+     case CommandFailed(_: Connect) =>
+      println("connect failed")
+      context stop self
+ 
+     case c @ Connected(remote, local) =>
+      val connection = sender()
+      log.info("Connected")
+      connection ! Register(self)
+      context become {
+        case data: ByteString =>
+          log.info("Sending message")
+          connection ! Write(data)
+        case CommandFailed(w: Write) =>
+          // O/S buffer was full
+          log.error("write failed")
+        case "close" =>
+          log.info("connection closed")
+          connection ! Close
+        case _: ConnectionClosed =>
+          log.info("connection closed")
+          context stop self
+       }
+     } 
+  }
+
   class TcpSource(id: String, port: Int, parser: String) extends Pipe {
     def selfId = id
     val logParser : MessageParser = parserFactory(parser)
