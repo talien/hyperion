@@ -5,7 +5,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer,ListBuffer}
 import akka.pattern.{ask, pipe}
 import akka.dispatch.RequiresMessageQueue
 import akka.dispatch.BoundedMessageQueueSemantics
@@ -247,15 +247,48 @@ package hyperion {
     }
   }
 
+  case class ClientConnected()
+
+  case class ClientConnectFailed()
+
+  case class ClientReconnectNotify()
+
   class TcpDestination(id: String, host: String, port: Int, template: String) extends Pipe {
     def selfId = id
-    def clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
+    var clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
     val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
+    var active = false;
+    val buffer = new ListBuffer[Message]()
+    var reconnectTimeout: Any = Nil
 
     def process() = {
         case m : Message => {
             log.info("Message received")
-            clientActor ! ByteString(msgTemplate.format(m))
+            if (active)
+            {
+                clientActor ! ByteString(msgTemplate.format(m))
+            } else {
+                buffer += m
+            }
+        }
+
+        case c: ClientConnected => {
+            log.info("Client connected")
+            active = true;
+            for (m <- buffer) {
+                clientActor ! ByteString(msgTemplate.format(m))
+            }
+        }
+
+        case c: ClientConnectFailed => {
+            log.info("Client connect failed")
+            reconnectTimeout = context.system.scheduler.scheduleOnce(FiniteDuration(1, SECONDS)) {
+                this.self ! ClientReconnectNotify()
+            }
+        }
+
+        case c: ClientReconnectNotify => {
+            clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
         }
     }
   }
@@ -265,33 +298,35 @@ package hyperion {
     val socketAddress = new InetSocketAddress(host, port)
 
     IO(Tcp) ! Connect(socketAddress)
+    log.info("ClientActor started") 
+
+    def activeReceiving(connection: ActorRef) : PartialFunction[Any, Unit] = {
+      case data: ByteString =>
+        log.info("Sending message")
+        connection ! Write(data)
+      case CommandFailed(w: Write) =>
+          // O/S buffer was full
+        log.error("write failed")
+      case "close" =>
+        log.info("connection closed")
+        connection ! Close
+      case _: ConnectionClosed =>
+        log.info("connection closed")
+        context stop self
+    }
    
     def receive = {
      case CommandFailed(connect) =>
       log.error("Connecting failed:" + connect.failureMessage)
+      manager ! ClientConnectFailed()
       context stop self
  
      case c @ Connected(remote, local) =>
       val connection = sender()
-      log.info("Connected")
+      log.info("Connection estabilished")
       connection ! Register(self)
-       unstashAll()
-      context become {
-        case data: ByteString =>
-          log.info("Sending message")
-          connection ! Write(data)
-        case CommandFailed(w: Write) =>
-          // O/S buffer was full
-          log.error("write failed")
-        case "close" =>
-          log.info("connection closed")
-          connection ! Close
-        case _: ConnectionClosed =>
-          log.info("connection closed")
-          context stop self
-       }
-
-     case data: ByteString => stash()
+      manager ! ClientConnected()
+      context become activeReceiving(connection)
      } 
   }
 

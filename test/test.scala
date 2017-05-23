@@ -243,10 +243,28 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       val probe1 = TestProbe()
       Thread.sleep(100)
       server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
-      Thread.sleep(100)
+      Thread.sleep(500)
       val expected = Message.withMessage("alma")
       client ! expected
       probe1.expectMsg(1000 millis, expected)
+      server ! PipeShutdown(List())
+      client ! PipeShutdown(List())
+    }
+ 
+    "be able to keep message when server is not available" in {
+      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest2")
+      Thread.sleep(100)
+      Thread.sleep(500)
+      val expected = Message.withMessage("alma")
+      client ! expected
+      Thread.sleep(500)
+      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "sourc2")
+      val probe1 = TestProbe()
+      server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      probe1.expectMsg(10000 millis, expected)
+      server ! PipeShutdown(List())
+      client ! PipeShutdown(List())
+  
     }
   }
 
