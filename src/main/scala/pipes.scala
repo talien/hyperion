@@ -267,8 +267,8 @@ package hyperion {
     IO(Tcp) ! Connect(socketAddress)
    
     def receive = {
-     case CommandFailed(_: Connect) =>
-      println("connect failed")
+     case CommandFailed(connect) =>
+      log.error("Connecting failed:" + connect.failureMessage)
       context stop self
  
      case c @ Connected(remote, local) =>

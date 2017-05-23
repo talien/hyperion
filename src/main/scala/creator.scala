@@ -153,8 +153,8 @@ package hyperion {
           removing.put(connection.from, List(connection.to))
         }
       })
-      println("Adding:" + adding)
-      println("Removing:" + removing)
+      log.info("Adding connections:" + adding)
+      log.info("Removing connections:" + removing)
       val updates = Registry.nodes.keys map ((key : String) => {
         val addPart = if (adding contains key) adding.get(key).get map ((tokey) => tokey -> system.actorSelection(pathForPipe(tokey))) toMap else Map[String,ActorSelection]()
         val removePart = if (removing contains key) removing.get(key).get else List[String]()
@@ -163,20 +163,20 @@ package hyperion {
           removePart
         )
       }) toMap ;
-      println("Updates before filter:" + updates)
+      log.debug("Updates before filter:" + updates)
       updates.filter {case(id, update) => ((update.add.size != 0) || (update.remove.size != 0))}
     }
 
     def updateConnections(connections: List[Connection]) = {
       val currentConnectionSet = Registry.connections.toSet
-      println("Current:" + currentConnectionSet)
+      log.debug("Current:" + currentConnectionSet)
       val nextConnectionSet = connections.toSet
-      println("Next:" + nextConnectionSet)
+      log.debug("Next:" + nextConnectionSet)
       val removableConnections = currentConnectionSet.diff(nextConnectionSet)
       val addingConnections = nextConnectionSet.diff(currentConnectionSet)
-      println("Removable:" + removableConnections)
+      log.debug("Removable:" + removableConnections)
       val updates = getListOfUpdates(addingConnections, removableConnections)
-      println("Updates:" + updates)
+      log.debug("Updates:" + updates)
       updates map { case(id, update) => {
         val fromActor = system.actorSelection(pathForPipe(id))
         fromActor ! update
@@ -203,7 +203,7 @@ package hyperion {
 
     def uploadConfig(config: Config) = {
       Try {
-        println("Config:" + config)
+        log.debug("Config:" + config)
         validateConfig(config)
         updateNodes(config.nodes)
         updateConnections(config.connections)
