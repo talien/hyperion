@@ -223,11 +223,11 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
    
   "TcpSource" must {
     "be able to work" in {
-      val actor = system.actorOf(Props(new TcpSource("source", 11111, "syslog")), "id")
+      val actor = system.actorOf(Props(new TcpSource("source", 11112, "syslog")), "id")
       val probe1 = TestProbe()
       actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
-      Thread.sleep(100)
-      val skt = new Socket("localhost", 11111);
+      Thread.sleep(200)
+      val skt = new Socket("localhost", 11112);
       val out = new PrintWriter(skt.getOutputStream());
       out.print("<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD\n")
       out.close();
@@ -235,6 +235,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
       probe1.expectMsg(1000 millis, expected)
       actor ! PipeShutdown(List())
+      Thread.sleep(100)
      }
   }
 
@@ -251,6 +252,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       probe1.expectMsg(1000 millis, expected)
       server ! PipeShutdown(List())
       client ! PipeShutdown(List())
+      Thread.sleep(100)
     }
  
     "be able to keep message when server is not available" in {
@@ -266,16 +268,15 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       probe1.expectMsg(10000 millis, expected)
       server ! PipeShutdown(List())
       client ! PipeShutdown(List())
-  
     }
   }
 
   "ParserNode" must {
     "be able to parse a field" in {
-      val actor = system.actorOf(Props(new ParserNode("id", "MESSAGE", "syslog", "")), "id")
+      val actor = system.actorOf(Props(new ParserNode("parserid", "MESSAGE", "syslog", "")), "parserid")
       val msg = Message.withMessage("<38>2013-11-11T01:01:31 localhost prg00000[1234]: msgpart")
       val probe1 = TestProbe()
-      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      actor ! PipeConnectionUpdate(Map(("parserid", system.actorSelection(probe1.ref.path.toString))),List())
       Thread.sleep(100)
       actor ! msg
       val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "msgpart", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
