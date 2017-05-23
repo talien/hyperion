@@ -10,7 +10,7 @@ import scala.util._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1")) with ImplicitSender
+class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1", createTestconfig())) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
   override def afterAll {
@@ -118,7 +118,7 @@ class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1")) with Imp
 
 }
 
-class TestConfigUploadAndDownloadCase extends TestKit(ActorSystem("HyperionTest2")) with ImplicitSender
+class TestConfigUploadAndDownloadCase extends TestKit(ActorSystem("HyperionTest2", createTestconfig())) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
   override def afterAll {
@@ -156,7 +156,7 @@ class TestConfigUploadAndDownloadCase extends TestKit(ActorSystem("HyperionTest2
 
 }
 
-class TestRemoveConnection extends TestKit(ActorSystem("HyperionTest3")) with ImplicitSender
+class TestRemoveConnection extends TestKit(ActorSystem("HyperionTest3", createTestconfig())) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
   override def afterAll {
@@ -219,7 +219,7 @@ class TestRemoveConnection extends TestKit(ActorSystem("HyperionTest3")) with Im
 
 }
 
-class TestRemovePipe extends TestKit(ActorSystem("HyperionTest4")) with ImplicitSender
+class TestRemovePipe extends TestKit(ActorSystem("HyperionTest4", createTestconfig())) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
   override def afterAll {

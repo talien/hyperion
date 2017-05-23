@@ -49,14 +49,12 @@ class TestMessageJson extends FlatSpec {
   it should "be able to parse JSON with one field" in {
     val line = "{\"alma\":\"korte\"}"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma") == "korte")
   }
 
   it should "be able to parse JSON with two fields" in {
     val line = "{\"alma\":\"korte\", \"alma2\":\"citrom\"}"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma") == "korte")
     assert(result("alma2") == "citrom")
   }
@@ -64,7 +62,6 @@ class TestMessageJson extends FlatSpec {
   it should "be able to parse JSON with nested objects" in {
     val line = "{\"alma\":\"korte\", \"alma2\": { \"barack\" : \"citrom\"} }"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma") == "korte")
     assert(result("alma2.barack") == "citrom")
   }
@@ -72,7 +69,6 @@ class TestMessageJson extends FlatSpec {
   it should "be able to parse JSON with two nested objects" in {
     val line = "{\"alma2\": { \"barack\" : \"citrom\"}, \"alma\": { \"barack\" : \"korte\" , \"banan\":\"szilva\"} }"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma.barack") == "korte")
     assert(result("alma2.barack") == "citrom")
     assert(result("alma.banan") == "szilva")
@@ -81,7 +77,6 @@ class TestMessageJson extends FlatSpec {
   it should "be able to parse JSON with several levels of objects" in {
     val line = "{\"alma\": { \"barack\" : { \"citrom\": { \"korte\": \"value1\"}, \"citrom2\":\"value2\" }, \"barack2\": \"value3\"}, \"alma2\":\"value4\"}"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma.barack.citrom.korte") == "value1")
     assert(result("alma.barack.citrom2") == "value2")
     assert(result("alma.barack2") == "value3")
@@ -91,7 +86,6 @@ class TestMessageJson extends FlatSpec {
   it should "be able to parse JSON with different types" in {
     val line = "{\"alma\":1, \"alma2\":true, \"alma3\": 1.1}"
     val result = parseJsonMessage(line)
-    println(result)
     assert(result("alma") == "1")
     assert(result("alma2") == "true")
     assert(result("alma3") == "1.1")

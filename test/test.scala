@@ -7,7 +7,7 @@ import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import java.io._
 import java.net._
-import com.typesafe.config.ConfigFactory
+
 
 import scala.concurrent.duration._
 import scala.util._
@@ -16,7 +16,7 @@ import scala.concurrent.Await
 class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
-  def this() = this(ActorSystem("HyperionTest2", ConfigFactory.load("application.conf") ))
+  def this() = this(ActorSystem("HyperionTest2",  createTestconfig()))
 
   override def afterAll {
     _system.shutdown()
@@ -75,11 +75,13 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   "FieldValueCounter" must {
     implicit val timeout = Timeout(100 millis)
     "not count anything if field is not present" in {
+
       val actor = system.actorOf(Props(new FieldValueCounter("id","AAA", "kakukk")))
       actor ! Message.withMessage("kakukk")
       val future = actor ? Query
       val result = Await.result(future, timeout.duration).asInstanceOf[Integer]
       assert(result == 0)
+
     }
 
     "count field is matches" in {
@@ -286,7 +288,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 class TestShutDown(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll {
 
-  def this() = this(ActorSystem("HyperionTest3"))
+  def this() = this(ActorSystem("HyperionTest3", createTestconfig()))
 
   override def afterAll {
     _system.shutdown()
