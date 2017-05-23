@@ -269,6 +269,40 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       server ! PipeShutdown(List())
       client ! PipeShutdown(List())
     }
+
+    "be able to reconnect when server is not available" in {
+      // Set up server & client
+      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "source3")
+      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest3")
+      val probe1 = TestProbe()
+      server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(100)
+      // Send message to client
+      val expected = Message.withMessage("alma")
+      client ! expected
+      Thread.sleep(100)
+      probe1.expectMsg(1000 millis, expected)
+      // Shut down server
+      server ! PipeShutdown(List())
+      Thread.sleep(100)
+      // Send second message to client
+      val expected2 = Message.withMessage("alma2")
+      client ! expected2
+      Thread.sleep(100)
+      // Recreate server again, attach same probe
+      val server2 = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "source3_1")
+      server2 ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(100)
+      // Send third message to client
+      val expected3 = Message.withMessage("alma3")
+      client ! expected3
+      Thread.sleep(100)
+      // Assert for two messages
+      probe1.expectMsg(10000 millis, expected2)
+      probe1.expectMsg(10000 millis, expected3)
+      client ! PipeShutdown(List())
+      server2 ! PipeShutdown(List())
+    }
   }
 
   "ParserNode" must {

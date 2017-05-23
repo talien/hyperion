@@ -253,66 +253,101 @@ package hyperion {
 
   case class ClientReconnectNotify()
 
+  case class ClientDisconnected()
+
+  case class ClientShutdownFinished(bufferedMessages: List[Message])
+
+  case class ClientInitiateShutdown()
+
   class TcpDestination(id: String, host: String, port: Int, template: String) extends Pipe {
     def selfId = id
-    var clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
+
+    def createClientActor =  context.system.actorOf(Props(new ClientActor(self, host, port, msgTemplate)))
+
     val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
+    var clientActor = createClientActor
     var active = false;
     val buffer = new ListBuffer[Message]()
-    var reconnectTimeout: Any = Nil
+    var reconnectTimeout: Cancellable = null
+
+    def initiateReconnect = {
+      if (reconnectTimeout != null) {
+        reconnectTimeout.cancel()
+      }
+      reconnectTimeout = context.system.scheduler.scheduleOnce(FiniteDuration(1, SECONDS)) {
+        this.self ! ClientReconnectNotify()
+        reconnectTimeout = null;
+      }
+    }
 
     def process() = {
         case m : Message => {
-            log.info("Message received")
+
             if (active)
             {
-                clientActor ! ByteString(msgTemplate.format(m))
+                clientActor ! m
             } else {
                 buffer += m
             }
         }
 
         case c: ClientConnected => {
-            log.info("Client connected")
+            log.debug("Client connected")
             active = true;
             for (m <- buffer) {
-                clientActor ! ByteString(msgTemplate.format(m))
+                clientActor ! m
             }
         }
 
         case c: ClientConnectFailed => {
-            log.info("Client connect failed")
-            reconnectTimeout = context.system.scheduler.scheduleOnce(FiniteDuration(1, SECONDS)) {
-                this.self ! ClientReconnectNotify()
-            }
+            log.debug("Client connect failed")
+            initiateReconnect
         }
 
         case c: ClientReconnectNotify => {
-            clientActor = context.system.actorOf(Props(new ClientActor(self, host, port)))
+            log.debug("Trying to reconnect")
+            clientActor = createClientActor
+        }
+
+        case c: ClientDisconnected => {
+            active = false;
+            clientActor ! ClientInitiateShutdown()
+        }
+
+        case ClientShutdownFinished(messages) => {
+            buffer.insertAll(0, messages)
+            initiateReconnect
         }
     }
   }
 
-  class ClientActor(manager: ActorRef, host: String, port: Int) extends Actor with ActorLogging with Stash {
+  class ClientActor(manager: ActorRef, host: String, port: Int, template: MessageTemplate) extends Actor with ActorLogging with Stash {
     import context.system
     val socketAddress = new InetSocketAddress(host, port)
+    var buffer = scala.collection.mutable.ListBuffer[Message]();
 
     IO(Tcp) ! Connect(socketAddress)
-    log.info("ClientActor started") 
+    log.info("ClientActor started")
+
+    def shuttingDown : PartialFunction[Any, Unit] = {
+      case data: Message => buffer += data
+
+      case _: ClientInitiateShutdown =>
+        manager ! ClientShutdownFinished(buffer.toList)
+        context stop self
+    }
 
     def activeReceiving(connection: ActorRef) : PartialFunction[Any, Unit] = {
-      case data: ByteString =>
-        log.info("Sending message")
-        connection ! Write(data)
+      case data: Message =>
+        connection ! Write(ByteString(template.format(data)))
       case CommandFailed(w: Write) =>
           // O/S buffer was full
-        log.error("write failed")
-      case "close" =>
-        log.info("connection closed")
-        connection ! Close
+        log.error("Write failed to connection " + socketAddress)
       case _: ConnectionClosed =>
-        log.info("connection closed")
-        context stop self
+        log.info("Connection closed")
+        manager ! ClientDisconnected()
+        context become shuttingDown
+
     }
    
     def receive = {
@@ -323,7 +358,7 @@ package hyperion {
  
      case c @ Connected(remote, local) =>
       val connection = sender()
-      log.info("Connection estabilished")
+      log.info("Connection estabilished to" + remote)
       connection ! Register(self)
       manager ! ClientConnected()
       context become activeReceiving(connection)
