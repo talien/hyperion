@@ -33,4 +33,8 @@ object Hyperion extends App
     val pipeManager = system.actorOf(Props(new PipeCreator(system, new PipeFactory("hyperion"))), "creator")
     HyperionREST.start(system, pipeManager, "0.0.0.0", 8080, "frontend")
     println("Hyperion started")
+
+    sys.addShutdownHook({
+        system.terminate()
+    })
 }
