@@ -2,7 +2,7 @@ const hyperionApp = angular.module("hyperionApp", ["angular-uuid", "ui.bootstrap
 
 const nodeTypes = [{
   id: "source",
-  name: "Source",
+  name: "Tcp Source",
   options: {
     port: "0",
     parser: [ "raw", "syslog", "json"]
@@ -52,6 +52,14 @@ const nodeTypes = [{
     prefix: "",
     field: "",
     parser: ["syslog", "json", "raw"]
+  }
+}, {
+  id: "destination",
+  name: "Tcp Destination",
+  options: {
+    host: "",
+    port: "",
+    template: ""
   }
 }];
 

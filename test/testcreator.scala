@@ -86,6 +86,36 @@ class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1", createTes
       }
 
     }
+    
+    "be able to set up TcpSource and TcpDestination properly" in {
+      val pipeManager = system.actorOf(Props(new PipeCreator(system, new PipeFactory("HyperionTest1"))), "creator5")
+      val probe1 = TestProbe()
+      val config = UploadConfig(
+        Config(
+          List[NodeProperty](
+            NodeProperty("almaid4", 0, 0,
+              PipeOptions("alma", "source",
+                Map[String, String](("port", "11115"),("parser","raw"))
+              )
+            ),
+            NodeProperty("korteid4", 0, 0,
+              PipeOptions("korte", "destination",
+                Map[String, String](("host","localhost"),("port", "11115"),("template","$MESSAGE\n"))
+              )
+            )
+          ),
+          List[Connection]()
+        )
+      )
+      pipeManager ? config
+      Thread.sleep(100)
+      system.actorSelection("akka://HyperionTest1/user/pipe_almaid4") ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(100)
+      val expected = Message.withMessage("testMessage")
+      system.actorSelection("akka://HyperionTest1/user/pipe_korteid4") ! expected
+      probe1.expectMsg(1000 millis, expected)
+
+    }
   }
   implicit val timeout = Timeout(10000 millis)
   "be able to accept UploadConfig message and set up pipe system" in {

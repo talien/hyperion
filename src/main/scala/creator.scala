@@ -55,6 +55,13 @@ package hyperion {
           val tcpsource = system.actorOf(Props(new TcpSource(id, port, parser)), nameFromId(id))
 
         }
+        case "destination" => {
+          val host = options.options("host")
+          val port: Int = options.options("port").toInt
+          val template = options.options("template")
+          val tcpdestination = system.actorOf(Props(new TcpDestination(id, host, port, template)), nameFromId(id))
+
+        }
         case "parser" => {
           val msgField = options.options("field")
           val parserName = options.options("parser")
