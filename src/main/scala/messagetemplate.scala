@@ -22,15 +22,42 @@ package hyperion {
     val templateItems: scala.collection.mutable.MutableList[TemplateItem] = scala.collection.mutable.MutableList[TemplateItem]();
     parse(template)
 
-    def getFirstCharacterOf(text: String, characters: String, startPosition: Int): Int =
-    {
-       for (a <- startPosition + 1 to (text.length() - 1))
-         {
-           if (!text(a).isLetterOrDigit) {
-              return a;
-           }
-         }
-      return -1;
+    def parseSingleMacro(text: String, startPosition: Int): Tuple2[String, Int] = {
+        for (a <- startPosition + 1 to (text.length() - 1))
+        {
+          if (!text(a).isLetterOrDigit) {
+            return (text.substring(startPosition + 1, a), a);
+          }
+        }
+        return (text.substring(startPosition + 1), -1);
+    }
+
+    def parseBracketMacro(text: String, startPosition: Int): Tuple2[String, Int] = {
+        val endBracket = text.indexOf("}", startPosition)
+        if (endBracket >= 0) {
+          return (text.substring(startPosition + 2, endBracket), endBracket + 1)
+        } else {
+          throw new Exception("MessageParser: Unmatched closing bracket in template")
+        }
+    }
+
+    def resolveSpecialMacros(variableName: String, endOfVariable: Int): Tuple2[TemplateItem, Int] = {
+        if (variableName == "DATE"){
+          return (DateMacro(), endOfVariable)
+        } else {
+          return (Variable(variableName), endOfVariable)
+        }
+    }
+
+    def parseMacro(text: String, startPosition: Int): Tuple2[TemplateItem, Int] = {
+      if (text(startPosition + 1) == '{')
+      {
+        val (variableName, endOfVariable) = parseBracketMacro(text, startPosition)
+        return resolveSpecialMacros(variableName, endOfVariable) 
+      } else {
+        val (variableName, endOfVariable) = parseSingleMacro(text, startPosition)
+        return resolveSpecialMacros(variableName, endOfVariable) 
+      }
     }
 
     def parse(template: String): Unit = {
@@ -45,17 +72,11 @@ package hyperion {
         templateItems += Literal(template.substring(0, variable))
       }
       if (variable != -1) {
-        val space = getFirstCharacterOf(template, "", variable)
-        var variableName = if (space != -1) template.substring(variable + 1, space) else template.substring(variable + 1)
-        if (variableName == "DATE"){
-          templateItems += DateMacro()
-        } else{
-          templateItems += Variable(variableName)
-        }
-
-        if (space != -1)
+        val (templateItem, endOfVariable) = parseMacro(template, variable)
+        templateItems += templateItem
+        if (endOfVariable != -1)
           {
-            parse(template.substring(space))
+            parse(template.substring(endOfVariable))
           }
       }
       else {

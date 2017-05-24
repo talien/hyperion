@@ -47,6 +47,11 @@ class TestTemplate extends FlatSpec {
     assert(template.format(Message.empty.withMessage("alma")) == "alma\n")
   }
 
+  it should "use brackets as indicators of variable name" in {
+    val template = new MessageTemplate("${alma.korte}")
+    assert(template.format(Message.empty.set("alma.korte","barack")) == "barack")
+  }
+
   //FIXME: it will definitely break in a TZ different than GMT + 1
   it should "treat DATE macro specially" in {
     val template = new MessageTemplate("$DATE")
