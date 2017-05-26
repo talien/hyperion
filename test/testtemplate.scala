@@ -57,6 +57,12 @@ class TestTemplate extends FlatSpec {
     assert(template.format(Message.withMessage("alma")) == "alma")
   }
 
+  it should "be able to use format-json template function with a simple message" in {
+    val template = new MessageTemplate("$(format-json)")
+    assert(template.format(Message.withMessage("alma")) == "{\"MESSAGE\":\"alma\"}")
+  }
+
+
   //FIXME: it will definitely break in a TZ different than GMT + 1
   it should "treat DATE macro specially" in {
     val template = new MessageTemplate("$DATE")

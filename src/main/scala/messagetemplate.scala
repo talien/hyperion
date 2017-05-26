@@ -3,8 +3,13 @@
   */
 import com.github.nscala_time.time.Imports._
 import org.joda.time.format._
+import net.liftweb.json.JsonAST._
+import net.liftweb.json.Extraction._
+import net.liftweb.json.Printer._
+
 
 package hyperion {
+
 
   trait TemplateFunction {
     def apply(msg: Message) : String
@@ -31,12 +36,25 @@ package hyperion {
     }
   }
 
+  class FormatJsonTemplateFunction(positionalParams : List[String]) extends TemplateFunction {
+    implicit val formats = net.liftweb.json.DefaultFormats
+
+    def apply(msg: Message) : String = {
+       return compact(render(decompose(msg.nvpairs)))
+    }
+  }
+
   object FunctionFactory {
     def create(functionBody: String) : TemplateItem = {
        val items = functionBody.split(" ").toList
        val name = items(0)
        val positionalParameters = items.tail
-       return Function(new EchoTemplateFunction(positionalParameters));
+       val function = name match {
+           case "echo" => new EchoTemplateFunction(positionalParameters)
+           case "format-json" => new FormatJsonTemplateFunction(positionalParameters)
+           case _ => throw new Exception("No such template function!")
+       }
+       return Function(function);
     }
   }
 
