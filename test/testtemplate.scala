@@ -52,6 +52,11 @@ class TestTemplate extends FlatSpec {
     assert(template.format(Message.empty.set("alma.korte","barack")) == "barack")
   }
 
+  it should "be able to use echo template function" in {
+    val template = new MessageTemplate("$(echo MESSAGE)")
+    assert(template.format(Message.withMessage("alma")) == "alma")
+  }
+
   //FIXME: it will definitely break in a TZ different than GMT + 1
   it should "treat DATE macro specially" in {
     val template = new MessageTemplate("$DATE")

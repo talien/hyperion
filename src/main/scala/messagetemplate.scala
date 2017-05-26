@@ -6,6 +6,10 @@ import org.joda.time.format._
 
 package hyperion {
 
+  trait TemplateFunction {
+    def apply(msg: Message) : String
+  }
+
   class TemplateItem()
   case class Literal(literal: String) extends TemplateItem
   case class Variable(variable: String) extends TemplateItem
@@ -15,6 +19,24 @@ package hyperion {
       val date = new DateTime(epoch)
       val fmt = ISODateTimeFormat.dateTime()
       return fmt.print(date)
+    }
+  }
+ 
+  case class Function(function: TemplateFunction) extends TemplateItem
+
+  class EchoTemplateFunction(positionalParams : List[String]) extends TemplateFunction {
+    val field = positionalParams(0)
+    def apply(msg: Message) : String = {
+       return msg(field)
+    }
+  }
+
+  object FunctionFactory {
+    def create(functionBody: String) : TemplateItem = {
+       val items = functionBody.split(" ").toList
+       val name = items(0)
+       val positionalParameters = items.tail
+       return Function(new EchoTemplateFunction(positionalParameters));
     }
   }
 
@@ -30,6 +52,19 @@ package hyperion {
           }
         }
         return (text.substring(startPosition + 1), -1);
+    }
+
+    def parseTemplateFunction(text: String, startPosition: Int): Tuple2[TemplateItem, Int] = {
+        val endParenthesis = text.indexOf(")", startPosition)
+        if (endParenthesis >= 0) {
+          val functionBody = text.substring(startPosition + 2, endParenthesis)
+          val endPosition = endParenthesis + 1
+
+          return (FunctionFactory.create(functionBody), endPosition)
+        } else {
+          throw new Exception("MessageParser: Unmatched closing parenthesis in template")
+        }
+       
     }
 
     def parseBracketMacro(text: String, startPosition: Int): Tuple2[String, Int] = {
@@ -50,13 +85,16 @@ package hyperion {
     }
 
     def parseMacro(text: String, startPosition: Int): Tuple2[TemplateItem, Int] = {
-      if (text(startPosition + 1) == '{')
-      {
-        val (variableName, endOfVariable) = parseBracketMacro(text, startPosition)
-        return resolveSpecialMacros(variableName, endOfVariable) 
-      } else {
-        val (variableName, endOfVariable) = parseSingleMacro(text, startPosition)
-        return resolveSpecialMacros(variableName, endOfVariable) 
+      return text(startPosition + 1) match {
+        case '{' =>
+                val (variableName, endOfVariable) = parseBracketMacro(text, startPosition)
+                resolveSpecialMacros(variableName, endOfVariable) 
+             
+        case '(' => parseTemplateFunction(text, startPosition) 
+        case _ =>
+                val (variableName, endOfVariable) = parseSingleMacro(text, startPosition)
+                resolveSpecialMacros(variableName, endOfVariable) 
+             
       }
     }
 
@@ -90,6 +128,7 @@ package hyperion {
             case Literal(literal) => x + literal
             case Variable(variable) => x + message.nvpairs.getOrElse(variable, "")
             case d : DateMacro => x + d.process(message)
+            case Function(f: TemplateFunction) => x + f(message)
           }
         }
       )
