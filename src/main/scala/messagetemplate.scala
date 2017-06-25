@@ -6,9 +6,11 @@ import org.joda.time.format._
 import net.liftweb.json.JsonAST._
 import net.liftweb.json.Extraction._
 import net.liftweb.json.Printer._
-
+import scala.collection.immutable.ListMap
 
 package hyperion {
+
+
 
 
   trait TemplateFunction {
@@ -39,8 +41,37 @@ package hyperion {
   class FormatJsonTemplateFunction(positionalParams : List[String]) extends TemplateFunction {
     implicit val formats = net.liftweb.json.DefaultFormats
 
+    def insertValueImpl(message: Map[String, Any], path: List[String], value: String): Map[String, Any] = {
+      if (path.length == 1) {
+        return message.updated(path(0), value)
+      }
+      val next = if (message.contains(path(0))) {
+        message.get(path(0)).get.asInstanceOf[Map[String, Any]]
+      } else {
+        Map[String, Any]()
+      }
+      return message.updated(path(0), insertValueImpl(next, path.tail, value))
+    }
+
+    def insertValue(message: Map[String, Any], key: String, value: String) : Map[String, Any] = {
+      val path = key.split('.').toList
+      val res = insertValueImpl(message, path, value)
+      return res
+    }
+
+    def transform(message: Message) : Map[String, Any] = {
+      var res = Map[String, Any]()
+
+      val map = ListMap(message.nvpairs.toSeq.sortWith(_._1 < _._1):_*)
+      for ((key, value) <- map) {
+        res = insertValue(res, key, value)
+      }
+
+      return res.toMap
+    }
+
     def apply(msg: Message) : String = {
-       return compact(render(decompose(msg.nvpairs)))
+       return compact(render(decompose(transform(msg))))
     }
   }
 

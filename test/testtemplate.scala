@@ -62,6 +62,16 @@ class TestTemplate extends FlatSpec {
     assert(template.format(Message.withMessage("alma")) == "{\"MESSAGE\":\"alma\"}")
   }
 
+  it should "be able to use format-json template function with a nested message" in {
+    val template = new MessageTemplate("$(format-json)")
+    assert(template.format(Message.empty.set("alma.korte", "barack")) == "{\"alma\":{\"korte\":\"barack\"}}")
+  }
+
+  it should "be able to use format-json template function with a more complex message" in {
+    val template = new MessageTemplate("$(format-json)")
+    val msg = Message.empty.set("alma.korte", "barack").set("alma.citrom","banan")
+    assert(template.format(msg) == "{\"alma\":{\"citrom\":\"banan\",\"korte\":\"barack\"}}")
+  }
 
   //FIXME: it will definitely break in a TZ different than GMT + 1
   it should "treat DATE macro specially" in {
@@ -73,6 +83,16 @@ class TestTemplate extends FlatSpec {
 class TestTemplatePerformance extends FlatSpec {
   it should "be fast" in {
     val template = new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $MESSAGE \n")
+    val start = DateTime.now.getMillis
+    for( a <- 1 to 100000) {
+      template.format(Message.empty.withMessage("alma").set("DATE", "0").set("HOST", "localhost").set("PRIO","1").set("PROGRAM","test"))
+    }
+    val end = DateTime.now.getMillis
+    println(end - start)
+  }
+
+  it should "be fast with JSON" in {
+    val template = new MessageTemplate("$(format-json)")
     val start = DateTime.now.getMillis
     for( a <- 1 to 100000) {
       template.format(Message.empty.withMessage("alma").set("DATE", "0").set("HOST", "localhost").set("PRIO","1").set("PROGRAM","test"))
