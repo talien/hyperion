@@ -25,6 +25,10 @@ libraryDependencies += "io.spray" %% "spray-json" % "1.3.2"
 
 libraryDependencies += "net.liftweb" %% "lift-json" % "2.6.2"
 
+libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s-core" % "5.4.5"
+
+libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s-http" % "5.4.5"
+
 scalaSource in Test <<= baseDirectory(_ / "test")
 
 assemblySettings

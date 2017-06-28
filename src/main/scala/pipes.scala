@@ -14,6 +14,9 @@ import akka.io.Tcp._
 import com.github.nscala_time.time.Imports._
 import org.joda.time.format._
 import java.io._
+import com.sksamuel.elastic4s.ElasticsearchClientUri
+import com.sksamuel.elastic4s.http.HttpClient
+import com.sksamuel.elastic4s.http.ElasticDsl._
 
 package hyperion {
 
@@ -244,6 +247,18 @@ package hyperion {
     def process = {
       case msg : Message => propagateMessage(msg.mergeWithPrefix(prefix, logParser(msg(field))))
 
+    }
+  }
+
+  class ElasticSearchDestination(id: String, host: String, port: Int) extends Pipe {
+    def selfId = id
+    val client = HttpClient(ElasticsearchClientUri(host, port))
+
+    def process = {
+      case msg : Message => {
+        val command = indexInto("logstash-2017-06-26/log").fields(msg.nvpairs)
+        client.execute(command)
+      }
     }
   }
 

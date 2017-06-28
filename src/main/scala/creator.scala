@@ -100,6 +100,12 @@ package hyperion {
           val template = options.options("template")
           system.actorOf(Props(new FileDestination(id, fileName, template)), nameFromId(id))
         }
+
+        case "elasticsearch" => {
+          val host = options.options("host")
+          val port: Int = options.options("port").toInt
+          system.actorOf(Props(new ElasticSearchDestination(id, host, port)), nameFromId(id))
+        }
       }
     }
   }
