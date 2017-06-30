@@ -88,6 +88,21 @@ package hyperion {
       }
   }
 
+  trait Tickable {
+    this: Actor =>
+    var cancellable: Any = Nil
+
+    def startTicking(initialDelay: FiniteDuration, period: FiniteDuration) = {
+      cancellable = context.system.scheduler.schedule(initialDelay, period) {
+        this.self ! Tick
+      }
+    }
+
+    def stopTicking() = {
+      cancellable.asInstanceOf[akka.actor.Cancellable].cancel
+    }
+  }
+
   class Printer(id: String) extends Pipe {
     def selfId = id
     def process = {
@@ -160,11 +175,10 @@ package hyperion {
     }
   }
 
-  class AverageCounter(id: String, counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor with ActorLogging {
+  class AverageCounter(id: String, counter: ActorSelection, tick: FiniteDuration, backlogsize: Int) extends Actor with ActorLogging with Tickable {
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
     def selfId = id
     var backlog = List[Int]()
-    var cancellable: Any = Nil
     var lastData = 0
 
     def updateBacklog = {
@@ -173,13 +187,12 @@ package hyperion {
       backlog = (currentData - lastData) :: (backlog take (backlogsize - 1))
       log.debug("Backlog in " + self.path.toString + " : " + backlog)
       lastData = currentData
+      println("Ticked")
     }
 
     override def preStart = {
       super.preStart()
-      cancellable = context.system.scheduler.schedule(tick, tick) {
-        this.self ! Tick
-      }
+      startTicking(tick, tick);
     }
 
     def countAverage = if (backlog.size != 0) (backlog.sum / backlog.size) else 0
@@ -189,7 +202,7 @@ package hyperion {
       case Tick => updateBacklog
     }
 
-    override def postStop = cancellable.asInstanceOf[akka.actor.Cancellable].cancel
+    override def postStop = stopTicking
   }
 
   class Tail(id: String, backlogSize: Int) extends Pipe {
@@ -202,25 +215,22 @@ package hyperion {
     }
   }
 
-  class FileDestination(id: String, fileName: String, template: String) extends Pipe {
+  class FileDestination(id: String, fileName: String, template: String) extends Pipe with Tickable {
     def selfId = id
     val writer = new BufferedWriter(new OutputStreamWriter(
       new FileOutputStream(fileName), "utf-8"))
-    var cancellable: Any = Nil
     var lastMessage = DateTime.now
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
     val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
 
     override def preStart() = {
       super.preStart()
-      cancellable = context.system.scheduler.schedule(FiniteDuration(0, SECONDS), FiniteDuration(1, SECONDS)) {
-        this.self ! Tick
-      }
+      startTicking(FiniteDuration(0, SECONDS),FiniteDuration(1, SECONDS))
 
     }
 
     override def postStop() = {
-      cancellable.asInstanceOf[akka.actor.Cancellable].cancel
+      stopTicking()
       writer.close()
       super.postStop()
     }
@@ -250,15 +260,32 @@ package hyperion {
     }
   }
 
-  class ElasticSearchDestination(id: String, host: String, port: Int) extends Pipe {
+  class ElasticSearchDestination(id: String, host: String, port: Int) extends Pipe with Tickable {
     def selfId = id
     val client = HttpClient(ElasticsearchClientUri(host, port))
+    var messages : ListBuffer[Message] = ListBuffer[Message]();
+
+    override def preStart() {
+      super.preStart();
+      startTicking(FiniteDuration(1, SECONDS),FiniteDuration(1, SECONDS))
+    }
 
     def process = {
       case msg : Message => {
-        val command = indexInto("logstash-2017-06-26/log").fields(msg.nvpairs)
-        client.execute(command)
+        //val command = indexInto("logstash-2017-06-26/log").fields(msg.nvpairs)
+        messages.append(msg);
+        if (messages.length >= 100) {
+          var command = bulk(messages.toSeq.map(indexInto("logstash-2017-06-26/log") fields _.nvpairs ))
+          client.execute(command).await
+          messages.clear()
+        }
+        
       }
+    }
+
+    override def postStop() = {
+      stopTicking()
+      super.postStop()
     }
   }
 
