@@ -12,6 +12,7 @@ package hyperion {
     val client = HttpClient(ElasticsearchClientUri(host, port))
     var messages : ListBuffer[Message] = ListBuffer[Message]();
     var lastMessage = DateTime.now
+    val indexTemplate = new MessageTemplate("logstash-${YEAR}-${MONTH}-${DAY}/log")
 
     override def preStart() {
       super.preStart();
@@ -19,14 +20,13 @@ package hyperion {
     }
 
     def flushMessages() = {
-      val command = bulk(messages.toSeq.map(indexInto("logstash-2017-06-26/log") fields _.nvpairs ))
+      val command = bulk(messages.toSeq.map((msg) => indexInto(indexTemplate.format(msg)) fields msg.nvpairs ))
       client.execute(command).await
       messages.clear()
     }
 
     def process = {
       case msg : Message => {
-        //val command = indexInto("logstash-2017-06-26/log").fields(msg.nvpairs)
         messages.append(msg);
         if (messages.length >= 100) {
           flushMessages()
