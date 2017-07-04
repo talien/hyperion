@@ -1,7 +1,7 @@
 /**
   * Created by talien on 4/29/17.
   */
-import com.github.nscala_time.time.Imports._
+import com.github.nscala_time.time.Imports.{DateTime}
 import org.joda.time.format._
 import net.liftweb.json.JsonAST._
 import net.liftweb.json.Extraction._
@@ -10,26 +10,71 @@ import scala.collection.immutable.ListMap
 
 package hyperion {
 
-
-
-
   trait TemplateFunction {
     def apply(msg: Message) : String
   }
 
-  class TemplateItem()
-  case class Literal(literal: String) extends TemplateItem
-  case class Variable(variable: String) extends TemplateItem
-  case class DateMacro() extends TemplateItem {
+  abstract class TemplateItem() {
+    def process(msg: Message) : String
+  }
+  case class Literal(literal: String) extends TemplateItem {
+    def process(msg: Message) : String = literal
+  }
+  case class Variable(variable: String) extends TemplateItem {
+    def process(msg: Message) : String = msg.nvpairs.getOrElse(variable, "")
+  }
+
+  abstract class AbstractDateMacro extends TemplateItem {
+    def fmt : DateTimeFormatter
+
     def process(msg: Message) : String = {
       val epoch = msg.nvpairs("DATE") toLong
       val date = new DateTime(epoch)
-      val fmt = ISODateTimeFormat.dateTime()
       return fmt.print(date)
     }
   }
+
+  case class DateMacro() extends AbstractDateMacro {
+    val format = ISODateTimeFormat.dateTime()
+    def fmt = format
+
+  }
+
+  case class YearMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("YYYY")
+    def fmt = format
+  }
+
+  case class MonthMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("MM")
+    def fmt = format
+  }
+
+  case class DayMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("dd")
+    def fmt = format
+  }
+
+  case class HourMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("HH")
+    def fmt = format
+  }
+
+  case class MinuteMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("mm")
+    def fmt = format
+  }
+
+  case class SecondsMacro() extends AbstractDateMacro {
+    val format = DateTimeFormat.forPattern("ss")
+    def fmt = format
+  }
  
-  case class Function(function: TemplateFunction) extends TemplateItem
+  case class Function(function: TemplateFunction) extends TemplateItem {
+    def process(msg: Message) : String = {
+      return function(msg)
+    }
+  }
 
   class EchoTemplateFunction(positionalParams : List[String]) extends TemplateFunction {
     val field = positionalParams(0)
@@ -126,10 +171,16 @@ package hyperion {
     }
 
     def resolveSpecialMacros(variableName: String, endOfVariable: Int): Tuple2[TemplateItem, Int] = {
-        if (variableName == "DATE"){
-          return (DateMacro(), endOfVariable)
-        } else {
-          return (Variable(variableName), endOfVariable)
+
+        variableName match {
+          case "DATE" => (DateMacro(), endOfVariable)
+          case "YEAR" => (YearMacro(), endOfVariable)
+          case "MONTH" => (MonthMacro(), endOfVariable)
+          case "DAY" => (DayMacro(), endOfVariable)
+          case "HOUR" => (HourMacro(), endOfVariable)
+          case "MINUTE" => (MinuteMacro(), endOfVariable)
+          case "SECOND" => (SecondsMacro(), endOfVariable)
+          case _ => (Variable(variableName), endOfVariable)
         }
     }
 
@@ -171,16 +222,13 @@ package hyperion {
       }
     }
 
-    def format(message: Message) = {
-      templateItems.foldLeft("")( (x, templateItem) => {
-         templateItem match {
-            case Literal(literal) => x + literal
-            case Variable(variable) => x + message.nvpairs.getOrElse(variable, "")
-            case d : DateMacro => x + d.process(message)
-            case Function(f: TemplateFunction) => x + f(message)
-          }
+    def format(message: Message) :String = {
+
+      var res = templateItems.foldLeft(new StringBuilder())( (x, templateItem) => {
+          x.append(templateItem.process(message))
         }
       )
+      return res.toString()
     }
   }
 

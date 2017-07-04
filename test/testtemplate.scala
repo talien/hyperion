@@ -78,6 +78,11 @@ class TestTemplate extends FlatSpec {
     val template = new MessageTemplate("$DATE")
     assert(template.format(Message.empty.set("DATE","0")) == "1970-01-01T01:00:00.000+01:00")
   }
+
+  it should "be able to format DATE macros" in {
+    val template = new MessageTemplate("${YEAR}-${MONTH}-${DAY}T${HOUR}:${MINUTE}:${SECOND}")
+    assert(template.format(Message.empty.set("DATE","0")) == "1970-01-01T01:00:00")
+  }
 }
 
 class TestTemplatePerformance extends FlatSpec {
