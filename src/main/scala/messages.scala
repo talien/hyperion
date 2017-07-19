@@ -73,7 +73,7 @@ package hyperion {
 				parse(JsonParserContext(List[Int](), ""), Message.empty)
 			}
 
-			parse(message, parser)
+			parse(message, parser).set("DATE",  (System.currentTimeMillis / 1000).toString)
 		}
   }
 
