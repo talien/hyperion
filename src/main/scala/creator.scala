@@ -109,7 +109,7 @@ package hyperion {
 
         case "elasticsearch" => {
           val host = options.options("host")
-          val template = options.options("template")
+          val template = options.options("index")
           val flavour = options.options.getOrElse("flavour", "http")
           val config = flavour match {
             case "http" => HTTPElasticSearchConfig(options.options("port").toInt)
@@ -227,7 +227,7 @@ package hyperion {
 
     def uploadConfig(config: Config) = {
       Try {
-        log.debug("Config:" + config)
+        log.info("Config:" + config)
         validateConfig(config)
         updateNodes(config.nodes)
         updateConnections(config.connections)

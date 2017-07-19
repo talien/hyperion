@@ -16,13 +16,13 @@ import org.elasticsearch.client.RestClientBuilder.HttpClientConfigCallback
 
 package hyperion {
 
-  class ElasticSearchDestination(id: String, host: String, flavour: String, template: String, config: ElasticSearchConfig) extends Pipe with Tickable {
+  class ElasticSearchDestination(id: String, host: String, flavour: String, index: String, config: ElasticSearchConfig) extends Pipe with Tickable {
     def selfId = id
 
     val client = clientBuilder()
     var messages : ListBuffer[Message] = ListBuffer[Message]();
     var lastMessage = DateTime.now
-    val indexTemplate = if (template == "") new MessageTemplate("hyperion-${YEAR}-${MONTH}-${DAY}/log") else new MessageTemplate(template)
+    val indexTemplate = if (index == "") new MessageTemplate("hyperion-${YEAR}-${MONTH}-${DAY}/log") else new MessageTemplate(index)
 
     private def createAwsSigner(region: String): AWSSigner = {
       import com.gilt.gfc.guava.GuavaConversions._

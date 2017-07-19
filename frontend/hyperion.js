@@ -61,6 +61,16 @@ const nodeTypes = [{
     port: "",
     template: ""
   }
+},{
+  id: "elasticsearch",
+  name: "ElasticSearch",
+  options: {
+    host: "",
+    port: "",
+    index: "",
+    aws_region: "",
+    flavour: ["http", "aws"]
+  }
 }];
 
 function clone(o) {
