@@ -114,7 +114,7 @@ package hyperion {
             path("rest" / "shutdown") {
               post {
                 complete {
-                  context.system.shutdown()
+                  context.system.terminate()
                   "Stopped"
                 }
 

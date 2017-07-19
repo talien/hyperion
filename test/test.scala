@@ -19,7 +19,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   def this() = this(ActorSystem("HyperionTest2",  createTestconfig()))
 
   override def afterAll {
-    _system.shutdown()
+    _system.terminate()
   }
 
   "Rewrite" must {
@@ -334,7 +334,7 @@ class TestShutDown(_system: ActorSystem) extends TestKit(_system) with ImplicitS
   def this() = this(ActorSystem("HyperionTest3", createTestconfig()))
 
   override def afterAll {
-    _system.shutdown()
+    _system.terminate()
   }
 
   "TestShutDown" must {
