@@ -99,10 +99,14 @@ package hyperion {
 	   val legacydatepart = legacymonths + "[ ]+[0-9]+ [0-9:]+"
 	   val dateregexp = ("(" + isodatepart  + "|"+ legacydatepart + ") (.*)").r
 	   val hostregexp = "([0-9A-Za-z.-_]*) (.*)".r
-	   val programregexp = "([^ \\[]*)(\\[[^\\]]+\\])*:* (.*)".r
+	   val programregexp = "([^ :\\[]*)(\\[[^\\]]+\\])*:* (.*)".r
 	
 	   def apply(message: String) = {
-			 Message(parsePrio(message))
+			 try {
+				 Message(parsePrio(message))
+			 } catch {
+				 case e: Exception => Message.withMessage(message)
+			 }
 		 }
 	   
 	   def parsePrio(message: String) =

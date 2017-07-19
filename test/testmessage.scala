@@ -43,6 +43,20 @@ class TestMessage extends FlatSpec {
     assert(result("alma") == "korte")
   }
 
+  it should "be able to parse program with no pid" in {
+    val line = "<13>Jan  1 00:00:00 alma korte: message"
+    val result = parseSyslogMessage(line)
+    assert(result("HOST") == "alma")
+    assert(result("PROGRAM") == "korte")
+    assert(result("MESSAGE") == "message")
+  }
+
+  it should "be able to fall back to raw format when syslog format fails" in {
+    val line = "alma korte"
+    val result = parseSyslogMessage(line)
+    assert(result("MESSAGE") == "alma korte")
+  }
+
 }
 
 class TestMessageJson extends FlatSpec {
