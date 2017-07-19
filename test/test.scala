@@ -43,6 +43,14 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       actor ! Message.withMessage("kakukk")
       probe1.expectMsg(1000 millis, Message.withMessage("kakukk"))
     }
+
+    "be able to use template in value field" in {
+      val probe1 = TestProbe()
+      val actor = system.actorOf(Props(new Rewrite("id", "MESSAGE", "almafa", "${alma}")))
+      actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
+      actor ! Message.withMessage("almafa").set("alma","korte")
+      probe1.expectMsg(1000 millis, Message.withMessage("korte").set("alma","korte"))
+    }
   }
   "MessageCounter" must {
     implicit val timeout = Timeout(1000 millis)
