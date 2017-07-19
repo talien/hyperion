@@ -151,13 +151,13 @@ package hyperion {
               } ~
               post {
                 entity(as[Config]) {
-                  config => {
-                    val res = pipeCreator ? UploadConfig(config)
+                  hyperionConfig => {
+                    val res = pipeCreator ? UploadConfig(hyperionConfig)
                     complete {
                       res map { x => {
                           x match {
-                            case Success(_) => "OK"
-                            case Failure(e) => e.getMessage()
+                            case Success(_) => HttpResponse(StatusCodes.OK, "OK")
+                            case Failure(e) => HttpResponse(StatusCodes.BadRequest, e.getMessage())
                           }
                         }
                       }
