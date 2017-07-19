@@ -1,6 +1,8 @@
 import akka.actor._
 import com.typesafe.config.ConfigFactory
 import hyperion._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object Hyperion extends App
 {
@@ -36,5 +38,6 @@ object Hyperion extends App
 
     sys.addShutdownHook({
         system.terminate()
+        Await.result(system.whenTerminated, 30 seconds)
     })
 }

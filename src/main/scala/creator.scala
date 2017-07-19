@@ -28,6 +28,12 @@ package hyperion {
 
   case class UploadConfig(config: Config)
 
+  trait ElasticSearchConfig {}
+
+  case class AWSElasticSearchConfig(aws_region: String) extends ElasticSearchConfig
+
+  case class HTTPElasticSearchConfig(port: Integer) extends ElasticSearchConfig
+
   trait HyperionPathResolver {
     val pipePrefix = "pipe_"
     def actorSystemName : String
@@ -103,8 +109,13 @@ package hyperion {
 
         case "elasticsearch" => {
           val host = options.options("host")
-          val port: Int = options.options("port").toInt
-          system.actorOf(Props(new ElasticSearchDestination(id, host, port)), nameFromId(id))
+          val template = options.options("template")
+          val flavour = options.options.getOrElse("flavour", "http")
+          val config = flavour match {
+            case "http" => HTTPElasticSearchConfig(options.options("port").toInt)
+            case "aws" => AWSElasticSearchConfig(options.options.getOrElse("aws_region", "us-east-1"))
+          }
+          system.actorOf(Props(new ElasticSearchDestination(id, host, flavour, template, config)), nameFromId(id))
         }
       }
     }

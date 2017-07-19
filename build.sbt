@@ -29,6 +29,14 @@ libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s-core" % "5.4.5"
 
 libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s-http" % "5.4.5"
 
+libraryDependencies += "vc.inreach.aws" % "aws-signing-request-interceptor" % "0.0.16"
+
+libraryDependencies += "com.gilt" %% "gfc-guava" % "0.2.5"
+
+libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.5"
+
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.6.4"
+
 scalaSource in Test <<= baseDirectory(_ / "test")
 
 assemblySettings
