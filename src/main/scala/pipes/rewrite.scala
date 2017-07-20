@@ -15,4 +15,17 @@ package hyperion {
     }
   }
 
+ class SetNode(id: String, name: String, value: String) extends Pipe {
+    def selfId = id
+
+    val template = new MessageTemplate(value);
+
+    def process = {
+      case msg: Message => {
+        propagateMessage(msg.set(name, template.format(msg)))
+      }
+    }
+  }
+
+
 }

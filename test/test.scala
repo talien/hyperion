@@ -52,6 +52,34 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       probe1.expectMsg(1000 millis, Message.withMessage("korte").set("alma","korte"))
     }
   }
+
+  "Set" must {
+    "set field with a literal value if field does not exists" in {
+      val probe1 = TestProbe()
+      val actor = system.actorOf(Props(new SetNode("id", "alma", "korte")))
+      actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
+      actor ! Message.empty
+      probe1.expectMsg(1000 millis, Message.empty.set("alma","korte"))
+    }
+
+   "set field with a template value if field does not exists" in {
+      val probe1 = TestProbe()
+      val actor = system.actorOf(Props(new SetNode("id", "alma", "${korte}")))
+      actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
+      actor ! Message.empty.set("korte", "barack")
+      probe1.expectMsg(1000 millis, Message.empty.set("alma","barack").set("korte", "barack"))
+    }
+
+  "overwrite field with a template value if already exists " in {
+      val probe1 = TestProbe()
+      val actor = system.actorOf(Props(new SetNode("id", "alma", "${korte}")))
+      actor ! PipeConnectionUpdate(Map(("barack", system.actorSelection(probe1.ref.path))),List())
+      actor ! Message.empty.set("korte", "barack").set("alma", "citrom")
+      probe1.expectMsg(1000 millis, Message.empty.set("alma","barack").set("korte", "barack"))
+    }
+
+  }
+
   "MessageCounter" must {
     implicit val timeout = Timeout(1000 millis)
 
