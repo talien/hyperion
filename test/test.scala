@@ -268,7 +268,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       out.print("<38>2013-11-11T01:01:31 localhost prg00000[1234]: seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD\n")
       out.close();
       skt.close();
-      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
+      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "seq: 0000009579, thread: 0000, runid: 1384128081, stamp: 2013-11-11T01:01:31 PADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADDPADD", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384131691000"))
       probe1.expectMsg(1000 millis, expected)
       actor ! PipeShutdown(List())
       Thread.sleep(100)
@@ -349,7 +349,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       actor ! PipeConnectionUpdate(Map(("parserid", system.actorSelection(probe1.ref.path.toString))),List())
       Thread.sleep(100)
       actor ! msg
-      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "msgpart", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384128091000"))
+      val expected = Message(Map("PROGRAM" -> "prg00000", "HOST" -> "localhost", "MESSAGE" -> "msgpart", "PID" -> "[1234]", "PRIO" -> "38", "DATE" -> "1384131691000"))
       probe1.expectMsg(1000 millis, expected)
       actor ! PipeShutdown(List())
     }

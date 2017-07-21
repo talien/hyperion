@@ -35,38 +35,38 @@ package hyperion {
   }
 
   case class DateMacro() extends AbstractDateMacro {
-    val format = ISODateTimeFormat.dateTime()
+    val format = ISODateTimeFormat.dateTime().withZoneUTC()
     def fmt = format
 
   }
 
   case class YearMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("YYYY")
+    val format = DateTimeFormat.forPattern("YYYY").withZoneUTC()
     def fmt = format
   }
 
   case class MonthMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("MM")
+    val format = DateTimeFormat.forPattern("MM").withZoneUTC()
     def fmt = format
   }
 
   case class DayMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("dd")
+    val format = DateTimeFormat.forPattern("dd").withZoneUTC()
     def fmt = format
   }
 
   case class HourMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("HH")
+    val format = DateTimeFormat.forPattern("HH").withZoneUTC()
     def fmt = format
   }
 
   case class MinuteMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("mm")
+    val format = DateTimeFormat.forPattern("mm").withZoneUTC()
     def fmt = format
   }
 
   case class SecondsMacro() extends AbstractDateMacro {
-    val format = DateTimeFormat.forPattern("ss")
+    val format = DateTimeFormat.forPattern("ss").withZoneUTC()
     def fmt = format
   }
  

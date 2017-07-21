@@ -90,9 +90,9 @@ package hyperion {
 	}
 		
 	object parseSyslogMessage extends MessageParser {
-	   val dateformatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss")
-	   val dateformatterv2 = DateTimeFormat.forPattern("MMM dd HH:mm:ss")
-	   val dateformatterv3 = DateTimeFormat.forPattern("MMM  d HH:mm:ss")
+	   val dateformatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(DateTimeZone.UTC)
+	   val dateformatterv2 = DateTimeFormat.forPattern("MMM dd HH:mm:ss").withZone(DateTimeZone.UTC)
+	   val dateformatterv3 = DateTimeFormat.forPattern("MMM  d HH:mm:ss").withZone(DateTimeZone.UTC)
 	   val prioregexp = "<([0-9]*)>(.*)".r
 	   val isodatepart = "[0-9A-Z:-]*"
 	   val legacymonths = "(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
