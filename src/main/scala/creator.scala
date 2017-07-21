@@ -81,6 +81,11 @@ package hyperion {
           val substitutionValue = options.options("substvalue")
           system.actorOf(Props(new Rewrite(id, fieldName, matchExpression, substitutionValue)), nameFromId(id))
         }
+        case "set" => {
+          val fieldName = options.options("fieldname")
+          val substitutionValue = options.options("substvalue")
+          system.actorOf(Props(new SetNode(id, fieldName, substitutionValue)), nameFromId(id))
+        }
         case "averageCounter" => {
           val counterName = options.options("counter")
           val counter = system.actorSelection(pathForPipe(counterName))

@@ -23,6 +23,13 @@ const nodeTypes = [{
     substvalue: ""
   }
 }, {
+  id: "set",
+  name: "Set",
+  options: {
+    fieldname: "",
+    substvalue: ""
+  }
+}, {
   id: "counter",
   name: "Counter",
   options: {}
