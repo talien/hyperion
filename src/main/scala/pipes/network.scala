@@ -7,6 +7,7 @@ import akka.io.{IO, Tcp}
 import akka.io.Tcp.{Connect, CommandFailed, Write, ConnectionClosed, Connected,
     Register, ResumeAccepting, Bound, Unbind, ResumeReading, SuspendReading, Event}
 import akka.util.ByteString
+import scala.util.{Try, Success, Failure}
 
 package hyperion {
   case class ClientConnected()
@@ -139,11 +140,6 @@ package hyperion {
       }
     }
 
-    def parse(message: String) = {
-      val parsedMessage = parseSyslogMessage(message)
-      propagateMessage(parsedMessage)
-    }
-
     override def pipeShutDownhook() {
       serverActor ! Terminate
     }
@@ -192,9 +188,17 @@ package hyperion {
       {
         val message = buffer.slice(0, endline).utf8String
         //log.info("Message: " + message+";");
-        parser ! msgParser(message)
-        sent_message += 1
-        processed_message += 1
+        
+        Try {
+          msgParser(message)
+        } match {
+          case Success(data) => {
+            parser ! data
+            sent_message += 1
+            processed_message += 1
+          }
+          case Failure(e) => log.error("Failed to parse message, error:'" + e.getMessage() + "' message:'" + message + "'")
+        }
         parseLines(buffer.slice(endline + 1, buffer.length))
       }
       else

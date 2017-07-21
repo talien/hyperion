@@ -273,11 +273,30 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       actor ! PipeShutdown(List())
       Thread.sleep(100)
      }
+
+    "be able resume when parse fails" in {
+      val actor = system.actorOf(Props(new TcpSource("source2", 11113, "json")), "id2")
+      val probe1 = TestProbe()
+      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(200)
+      val skt = new Socket("localhost", 11113);
+      val out = new PrintWriter(skt.getOutputStream());
+      out.print("blabla\n")
+      out.print("{\"alma\":\"korte\"}\n")
+      out.close()
+      skt.close()
+      val expected = Message(Map("alma" -> "korte"))
+      probe1.expectMsgPF(1000 millis) {
+        case x : Message => x("alma") == "korte"
+      }
+      actor ! PipeShutdown(List())
+      Thread.sleep(100)
+    }
   }
 
   "TcpDestination" must {
     "be able to send message to TcpSource" in {
-      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "sourc1")
+      val server = system.actorOf(Props(new TcpSource("source3", 11111, "raw")), "sourc1")
       val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest1")
       val probe1 = TestProbe()
       Thread.sleep(100)
@@ -292,13 +311,13 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
     }
  
     "be able to keep message when server is not available" in {
-      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest2")
+      val client = system.actorOf(Props(new TcpDestination("destination2", "localhost", 11111, "$MESSAGE\n")), "dest2")
       Thread.sleep(100)
       Thread.sleep(500)
       val expected = Message.withMessage("alma")
       client ! expected
       Thread.sleep(500)
-      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "sourc2")
+      val server = system.actorOf(Props(new TcpSource("source4", 11111, "raw")), "sourc2")
       val probe1 = TestProbe()
       server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
       probe1.expectMsg(10000 millis, expected)
@@ -308,8 +327,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 
     "be able to reconnect when server is not available" in {
       // Set up server & client
-      val server = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "source3")
-      val client = system.actorOf(Props(new TcpDestination("destination", "localhost", 11111, "$MESSAGE\n")), "dest3")
+      val server = system.actorOf(Props(new TcpSource("source5", 11111, "raw")), "source3")
+      val client = system.actorOf(Props(new TcpDestination("destination3", "localhost", 11111, "$MESSAGE\n")), "dest3")
       val probe1 = TestProbe()
       server ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
       Thread.sleep(100)
@@ -326,7 +345,7 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       client ! expected2
       Thread.sleep(100)
       // Recreate server again, attach same probe
-      val server2 = system.actorOf(Props(new TcpSource("source", 11111, "raw")), "source3_1")
+      val server2 = system.actorOf(Props(new TcpSource("source6", 11111, "raw")), "source3_1")
       server2 ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
       Thread.sleep(100)
       // Send third message to client
