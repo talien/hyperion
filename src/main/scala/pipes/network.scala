@@ -24,7 +24,7 @@ package hyperion {
   class TcpDestination(id: String, host: String, port: Int, template: String) extends Pipe {
     def selfId = id
 
-    def createClientActor =  context.system.actorOf(Props(new ClientActor(self, host, port, msgTemplate)))
+    def createClientActor =  context.system.actorOf(Props(new ClientActor(self, host, port, msgTemplate)), id + "_client")
 
     val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
     var clientActor = createClientActor
@@ -130,7 +130,7 @@ package hyperion {
   class TcpSource(id: String, port: Int, parser: String) extends Pipe {
     def selfId = id
     val logParser : MessageParser = parserFactory(parser)
-    val serverActor = context.system.actorOf(Props(new ServerActor(self, port, logParser)))
+    val serverActor = context.system.actorOf(Props(new ServerActor(self, port, logParser)),id + "_server")
     def process = {
 
       case msg: Message => {
@@ -158,7 +158,7 @@ package hyperion {
     def listening(listener: ActorRef): Receive = {
       case Connected(remote, local) =>
         val connection = sender()
-        val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)))
+        val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)), remote.toString().replace('/','_') )
 
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
         listener ! ResumeAccepting(batchSize = 1)
