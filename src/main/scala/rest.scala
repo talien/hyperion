@@ -76,7 +76,7 @@ package hyperion {
 
     def receive = runRoute {
 
-          path("rest" / "counter" / Segment) { name =>
+          path("api" / "counter" / Segment) { name =>
 
             get {
               import DefaultJsonProtocol._
@@ -89,7 +89,7 @@ package hyperion {
 
             }
           } ~
-            path("rest" / "stats" / Segment) { name =>
+            path("api" / "stats" / Segment) { name =>
               get {
                 import DefaultJsonProtocol._
                 respondWithMediaType(`application/json`) {
@@ -100,7 +100,7 @@ package hyperion {
                 }
               }
             } ~
-            path("rest" / "tail" / Segment) { name =>
+            path("api" / "tail" / Segment) { name =>
               get {
                 import MessageJsonProtocol._
                 respondWithMediaType(`application/json`) {
@@ -111,7 +111,7 @@ package hyperion {
                 }
               }
             } ~
-            path("rest" / "shutdown") {
+            path("api" / "shutdown") {
               post {
                 complete {
                   context.system.terminate()
@@ -120,7 +120,7 @@ package hyperion {
 
               }
             } ~
-            path("rest" / "create") {
+            path("api" / "create") {
               import NodePropertyJsonProtocol._
               post {
                 System.out.println()
@@ -133,14 +133,14 @@ package hyperion {
                 }
               }
             } ~
-            path("rest" / "join" / Segment / Segment) { (from, to) =>
+            path("api" / "join" / Segment / Segment) { (from, to) =>
               (get | post) {
                 pipeCreator ! Join(from, to)
                 println(from, to)
                 complete("hello")
               }
             } ~
-            path("rest" / "config") {
+            path("api" / "config") {
               import ConfigJsonProtocol._
               get {
                 respondWithMediaType(`application/json`) {

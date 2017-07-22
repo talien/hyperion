@@ -168,15 +168,15 @@ hyperionApp.service('ContextService', function(GraphService, $uibModal) {
 
 hyperionApp.service('HyperionBackend', function($http) {
   this.getConfig = function() {
-    return $http.get("/rest/config");
+    return $http.get("/api/config");
   }
 
   this.shutDown = function() {
-    return $http.post("/rest/shutdown");
+    return $http.post("/api/shutdown");
   }
 
   this.postConfig = function(data) {
-    return $http.post("/rest/config", JSON.stringify(data));
+    return $http.post("/api/config", JSON.stringify(data));
   }  
 
 });
@@ -395,7 +395,7 @@ Dashboard.prototype.add = function (scope, node) {
 
   repeater = function () {
     $.ajax({
-      url: "/rest/" + node.content.typeName + "/" + node.id,
+      url: "/api/" + node.content.typeName + "/" + node.id,
       type: 'GET',
       success: function (data) {
         update(item, data);
