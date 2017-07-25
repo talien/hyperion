@@ -1,12 +1,13 @@
 import akka.util.Timeout
 import scala.util.{Success, Failure}
-import scala.concurrent.duration._
+import scala.concurrent.duration.{FiniteDuration, SECONDS, DurationInt}
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor._
 import hyperion._
 import akka.pattern.{ask, pipe}
 import scala.util.Try
+import scala.concurrent.Future
 
 package hyperion {
 
@@ -16,13 +17,13 @@ package hyperion {
 
   case class Join(from: String, to: String)
 
-  case class CounterQuery(counterName: String)
-
   case class TailQuery(tailName: String)
 
-  case class StatsQuery(tailName: String)
+  case class StatsQueryApi(nodeName: String)
 
   case class StatisticItem(value: String, count: Integer)
+
+  case class AllStatsQuery()
 
   case class QueryConfig()
 
@@ -260,27 +261,69 @@ package hyperion {
       }
     }
 
+    def queryStats(name: String) = {
+      val pipe = context.system.actorSelection(pathForPipe(name))
+      val s = sender
+      pipe.resolveOne() onComplete {
+        case Success(actorRef) => {
+          log.info("Actor Found for stats")
+          log.info(s.toString())
+          log.info(actorRef.toString())
+
+          val result = Await.result(actorRef ? StatsRequest, timeout.duration).asInstanceOf[StatsResponse].values
+          s ! result
+        }
+        case Failure(e) => {
+          log.info("Actor Not Found");
+          log.info(sender.toString());
+
+          s ! akka.actor.Status.Failure(e)
+        }
+      }
+    }
+
+    def queryAllStats() : Map[String, Map[String, Int]] = {
+      val nodes = Registry.getNodesAsList
+      val actors = nodes map {
+        node => context.system.actorSelection(pathForPipe(node.id))
+      }
+      val actorRefs : List[Future[ActorRef]] = actors map {
+        actor => actor.resolveOne()
+      }
+      val stats= actorRefs map {
+        actorRef => actorRef flatMap {
+          x => (x ? StatsRequest).asInstanceOf[Future[StatsResponse]]
+        } map {
+          x => (x.values)
+        }
+      }
+      val nodeIds = nodes map { x => x.id }
+      val result = (nodeIds zip Await.result(Future.sequence(stats), timeout.duration)).toMap
+      return result
+    }
+
     def receive = {
       case Create(node) => create(node)
       case Join(from, to) => {
         join(Connection(from, to))
-      }
-      case CounterQuery(name) => {
-        queryPipe[Integer](name)
       }
 
       case TailQuery(name) => {
         queryPipe[List[Message]](name)
       }
 
-      case StatsQuery(name) => {
-        queryPipe[Map[String, Integer]](name)
+      case StatsQueryApi(name) => {
+        queryStats(name)
       }
       case QueryConfig =>
         sender ! Registry.config
       case UploadConfig(config) => {
         val result = uploadConfig(config)
         sender ! result
+      }
+
+      case AllStatsQuery => {
+        sender ! queryAllStats()
       }
 
     }

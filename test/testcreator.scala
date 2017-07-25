@@ -110,7 +110,7 @@ class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1", createTes
       pipeManager ? config
       Thread.sleep(100)
       system.actorSelection("akka://HyperionTest1/user/pipe_almaid4") ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
-      Thread.sleep(100)
+      Thread.sleep(500)
       val expected = Message.withMessage("testMessage")
       system.actorSelection("akka://HyperionTest1/user/pipe_korteid4") ! expected
       probe1.expectMsg(1000 millis, expected)
@@ -144,6 +144,37 @@ class TestPipeCreatorCase extends TestKit(ActorSystem("HyperionTest1", createTes
     Thread.sleep(100)
     val result = Await.result(pipeManager ? TailQuery("korteid3"), timeout.duration).asInstanceOf[List[Message]]
     assert(result == List[Message](Message.withMessage("alma")))
+  }
+
+  "be able to query all stats in pipe system" in {
+    Registry.reset
+    val pipeManager = system.actorOf(Props(new PipeCreator(system, new PipeFactory("HyperionTest1"))), "creator6")
+    val config = UploadConfig(
+      Config(
+        List[NodeProperty](
+          NodeProperty("almaid5", 0, 0,
+            PipeOptions("alma", "filter",
+              Map[String, String](("fieldname", "MESSAGE"), ("matchexpr","alma"))
+            )
+          ),
+          NodeProperty("korteid5", 0, 0,
+            PipeOptions("korte", "counter",
+              Map[String, String]()
+            )
+          )
+        ),
+        List[Connection](Connection("almaid5", "korteid5"))
+      )
+    )
+    val res = pipeManager ? config
+    Thread.sleep(100)
+    system.actorSelection("akka://HyperionTest1/user/pipe_almaid5") ! Message.withMessage("alma")
+    Thread.sleep(100)
+    val result = Await.result(pipeManager ? AllStatsQuery, timeout.duration).asInstanceOf[Map[String, Map[String, Int]]]
+    val expectedResult = Map[String, Map[String, Int]](
+      "almaid5" -> Map[String, Int]( "processed" -> 1, "matched" -> 1),
+      "korteid5" ->  Map[String, Int] ("counter" -> 1))
+    assert(result == expectedResult)
   }
 
 }

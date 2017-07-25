@@ -18,6 +18,7 @@ import spray.json._
 import DefaultJsonProtocol._
 import spray.routing.directives.CachingDirectives._
 import spray.httpx.SprayJsonSupport._
+import scala.concurrent.Future
 
 package hyperion {
 
@@ -62,33 +63,20 @@ package hyperion {
 
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
 
-    def getCounter(name: String) = {
-      Await.result(pipeCreator ? CounterQuery(name), timeout.duration).asInstanceOf[Int]
-    }
-
     def getTail(name: String) = {
       pipeCreator ? TailQuery(name)
     }
 
     def getStats(name: String) = {
-      pipeCreator ? StatsQuery(name)
+      pipeCreator ? StatsQueryApi(name)
+    }
+
+    def getAllStats() = {
+      log.info("Getting all stats")
+      (pipeCreator ? AllStatsQuery).asInstanceOf[Future[Map[String, Map[String, Int]]]]
     }
 
     def receive = runRoute {
-
-          path("api" / "counter" / Segment) { name =>
-
-            get {
-              import DefaultJsonProtocol._
-              respondWithMediaType(`application/json`) {
-                complete {
-                  val result = getCounter(name)
-                  result.toString
-                }
-              }
-
-            }
-          } ~
             path("api" / "stats" / Segment) { name =>
               get {
                 import DefaultJsonProtocol._
@@ -96,6 +84,16 @@ package hyperion {
                   complete {
                     val result = getStats(name).mapTo[Map[String, Int]]
                     result
+                  }
+                }
+              }
+            } ~
+            path("api" / "stats") {
+              get {
+                import DefaultJsonProtocol._
+                respondWithMediaType(`application/json`) {
+                  complete {
+                    getAllStats()
                   }
                 }
               }

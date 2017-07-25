@@ -32,6 +32,7 @@ package hyperion {
     var active = false;
     val buffer = new ListBuffer[Message]()
     var reconnectTimeout: Cancellable = null
+    var processed = 0
 
     def initiateReconnect = {
       if (reconnectTimeout != null) {
@@ -52,6 +53,11 @@ package hyperion {
         } else {
           buffer += m
         }
+        processed += 1
+      }
+
+      case StatsRequest => {
+        sender ! StatsResponse(Map[String, Int]("processed" -> processed, "queued" -> buffer.length))
       }
 
       case c: ClientConnected => {
@@ -60,6 +66,7 @@ package hyperion {
         for (m <- buffer) {
           clientActor ! m
         }
+        buffer.clear()
       }
 
       case c: ClientConnectFailed => {
@@ -132,12 +139,20 @@ package hyperion {
     def selfId = id
     val logParser : MessageParser = parserFactory(parser)
     val serverActor = context.system.actorOf(Props(new ServerActor(self, port, logParser)),id + "_server")
+    var processed = 0
     def process = {
 
       case msg: Message => {
         propagateMessage(msg)
+        processed += 1
         sender ! Ack
       }
+
+      case s @ StatsRequest => {
+        log.info("Generating statistics")
+        sender ! StatsResponse(Map("processed" -> processed))
+      }
+
     }
 
     override def pipeShutDownhook() {
@@ -146,7 +161,7 @@ package hyperion {
 
   }
 
-  class ServerActor (parser: ActorRef, port: Int, msgParser: MessageParser) extends Actor {
+  class ServerActor (parser: ActorRef, port: Int, msgParser: MessageParser) extends Actor with ActorLogging {
     import context.system
 
     IO(Tcp) ! Tcp.Bind(self, new InetSocketAddress("0.0.0.0", port), pullMode = true)
@@ -154,6 +169,7 @@ package hyperion {
     def listening(listener: ActorRef): Receive = {
       case Connected(remote, local) =>
         val connection = sender()
+        log.info("Connection accepted from:", remote.toString())
         val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)), remote.toString().replace('/','_') )
 
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
@@ -179,6 +195,7 @@ package hyperion {
     var data_buffer = ByteString()
     var sent_message = 0
     var processed_message = 0
+    var parsing_failure = 0
 
     override def preStart: Unit = connection ! ResumeReading
 
@@ -197,7 +214,10 @@ package hyperion {
             sent_message += 1
             processed_message += 1
           }
-          case Failure(e) => log.error("Failed to parse message, error:'" + e.getMessage() + "' message:'" + message + "'")
+          case Failure(e) => {
+            log.error("Failed to parse message, error:'" + e.getMessage() + "' message:'" + message + "'")
+            parsing_failure += 1
+          }
         }
         parseLines(buffer.slice(endline + 1, buffer.length))
       }
@@ -209,13 +229,6 @@ package hyperion {
 
     def receive: Receive = {
       case Tcp.Received(data) =>
-        /*val text = data.utf8String.trim
-        log.debug("Received '{}' from remote address {}", text, remote)
-        text match {
-          case "close" => context.stop(self)
-          //case _       => sender ! Tcp.Write(data)
-        }*/
-        //log.info(data.length.toString)
         connection ! SuspendReading
         data_buffer ++= data
         data_buffer = parseLines(data_buffer)

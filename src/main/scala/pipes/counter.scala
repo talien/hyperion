@@ -14,8 +14,8 @@ package hyperion {
         count(data)
       case Reset =>
         counter = 0
-      case Query => {
-        sender ! counter
+      case StatsRequest => {
+        sender ! StatsResponse(Map[String,Int]("counter" -> counter))
       }
     }
 
@@ -48,8 +48,9 @@ package hyperion {
           val value = stats.getOrElse(data(name), 0)
           stats.update(data(name), value + 1)
         }
-      case Query => {
-        sender ! stats.toMap
+
+      case StatsRequest => {
+        sender ! StatsResponse(stats.toMap)
       }
     }
   }
@@ -62,7 +63,7 @@ package hyperion {
 
     def updateBacklog = {
       log.debug("Updating backlog in " + self.path.toString)
-      val currentData = Await.result(counter ? Query, timeout.duration).asInstanceOf[Integer]
+      val currentData = Await.result(counter ? StatsRequest, timeout.duration).asInstanceOf[StatsResponse].values("counter")
       backlog = (currentData - lastData) :: (backlog take (backlogsize - 1))
       log.debug("Backlog in " + self.path.toString + " : " + backlog)
       lastData = currentData
@@ -77,7 +78,7 @@ package hyperion {
     def countAverage = if (backlog.size != 0) (backlog.sum / backlog.size) else 0
 
     def receive = {
-      case Query => sender ! countAverage
+      case StatsRequest => sender ! StatsResponse(Map[String, Int]( "counter" -> countAverage))
       case Tick => updateBacklog
     }
 

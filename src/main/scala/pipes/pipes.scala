@@ -23,6 +23,10 @@ package hyperion {
 
   case class Query()
 
+  case class StatsRequest()
+
+  case class StatsResponse(values: Map[String, Int])
+
   case class Reset()
 
   case class Tick()

@@ -14,6 +14,7 @@ package hyperion {
     var lastMessage = DateTime.now
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
     val msgTemplate = if (template == "") new MessageTemplate("<$PRIO> $DATE $HOST $PROGRAM $PID : $MESSAGE \n") else new MessageTemplate(template)
+    var processed = 0
 
     override def preStart() = {
       super.preStart()
@@ -30,6 +31,7 @@ package hyperion {
     def process = {
       case msg: Message => {
         writer.write(msgTemplate.format(msg))
+        processed += 1
         lastMessage = DateTime.now
       }
 
@@ -39,6 +41,10 @@ package hyperion {
           writer.flush()
         }
 
+      }
+
+      case StatsRequest => {
+        sender ! StatsResponse(Map[String, Int]( "processed" -> processed))
       }
     }
   }

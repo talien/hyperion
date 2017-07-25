@@ -12,6 +12,7 @@ import org.apache.http.HttpHost
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder
 import org.elasticsearch.client.RestClient
 import org.elasticsearch.client.RestClientBuilder.HttpClientConfigCallback
+import scala.util.{Try, Success, Failure}
 
 
 package hyperion {
@@ -23,6 +24,9 @@ package hyperion {
     var messages : ListBuffer[Message] = ListBuffer[Message]();
     var lastMessage = DateTime.now
     val indexTemplate = if (index == "") new MessageTemplate("hyperion-${YEAR}-${MONTH}-${DAY}/log") else new MessageTemplate(index)
+    var processed = 0
+    var queued = 0
+    var failed = 0
 
     private def createAwsSigner(region: String): AWSSigner = {
       import com.gilt.gfc.guava.GuavaConversions._
@@ -34,7 +38,7 @@ package hyperion {
     }
 
     private def createEsHttpClient(uri: String, region: String): HttpClient = {
-      class AWSSignerInteceptor extends HttpClientConfigCallback {
+      class AWSSignerInterceptor extends HttpClientConfigCallback {
         override def customizeHttpClient(httpClientBuilder: HttpAsyncClientBuilder): HttpAsyncClientBuilder = {
           httpClientBuilder.addInterceptorLast(new AWSSigningRequestInterceptor(createAwsSigner(region)))
         }
@@ -48,7 +52,7 @@ package hyperion {
       log.info(s"Creating HTTP client on ${hosts.mkString(",")}")
 
       val client = RestClient.builder(hosts: _*)
-        .setHttpClientConfigCallback(new AWSSignerInteceptor)
+        .setHttpClientConfigCallback(new AWSSignerInterceptor)
         .build()
       HttpClient.fromRestClient(client)
     }
@@ -74,14 +78,25 @@ package hyperion {
     def flushMessages() = {
       if (messages.length > 0) {
         val command = bulk(messages.toSeq.map((msg) => indexInto(indexTemplate.format(msg)) fields msg.nvpairs))
-        client.execute(command).await
+        Try {
+          client.execute(command).await
+        } match {
+          case Failure(e) => {
+            log.error("Exception happened during inserting into ElasticSearch", e.getMessage())
+            failed += queued
+          }
+          case _ => {}
+        }
         messages.clear()
+        queued = 0
       }
     }
 
     def process = {
       case msg : Message => {
         messages.append(msg)
+        processed += 1
+        queued += 1
         if (messages.length >= 100) {
           flushMessages()
         }
@@ -94,6 +109,9 @@ package hyperion {
           flushMessages()
         }
 
+      }
+      case StatsRequest => {
+        sender ! StatsResponse(Map[String, Int]("processed" -> processed, "failed" -> failed, "queued" -> queued))
       }
     }
 
