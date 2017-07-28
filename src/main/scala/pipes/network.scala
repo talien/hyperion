@@ -232,7 +232,7 @@ package hyperion {
         connection ! SuspendReading
         data_buffer ++= data
         data_buffer = parseLines(data_buffer)
-      //connection ! ResumeReading
+        if (sent_message == 0) connection ! ResumeReading
       case _: Tcp.ConnectionClosed =>
         log.info("Stopping, because connection for remote address {} closed", remote)
         log.info("Remaining messages: {}", sent_message)
