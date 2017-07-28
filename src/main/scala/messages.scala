@@ -64,6 +64,7 @@ package hyperion {
 						case BoolVal(bool) => parse(context, message.set(context.prefix + fieldname, bool.toString()))
 						case DoubleVal(double) => parse(context, message.set(context.prefix + fieldname, double.toString()))
 						case OpenObj => parse(context.extendPrefix(fieldname), message)
+						case NullVal => parse(context, message.set(context.prefix + fieldname, "null"))
 					}
 					case CloseObj => parse(context.removePrefix, message)
 					case End => message
