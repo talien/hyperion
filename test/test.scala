@@ -323,6 +323,25 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
      }
 
     "be able resume when parse fails" in {
+      val actor = system.actorOf(Props(new TcpSource("source2", 11213, "json")), "id2")
+      val probe1 = TestProbe()
+      actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
+      Thread.sleep(200)
+      val skt = new Socket("localhost", 11213);
+      val out = new PrintWriter(skt.getOutputStream());
+      out.print("blabla\n")
+      out.print("{\"alma\":\"korte\"}\n")
+      out.close()
+      skt.close()
+      val expected = Message(Map("alma" -> "korte"))
+      probe1.expectMsgPF(1000 millis) {
+        case x : Message => x("alma") == "korte"
+      }
+      actor ! PipeShutdown(List())
+      Thread.sleep(100)
+    }
+
+    "be able resume when parse fails in individual read cycles" in {
       val actor = system.actorOf(Props(new TcpSource("source2", 11113, "json")), "id2")
       val probe1 = TestProbe()
       actor ! PipeConnectionUpdate(Map(("id", system.actorSelection(probe1.ref.path.toString))),List())
@@ -330,6 +349,8 @@ class TestPipeCase(_system: ActorSystem) extends TestKit(_system) with ImplicitS
       val skt = new Socket("localhost", 11113);
       val out = new PrintWriter(skt.getOutputStream());
       out.print("blabla\n")
+      out.flush()
+      Thread.sleep(100)
       out.print("{\"alma\":\"korte\"}\n")
       out.close()
       skt.close()
