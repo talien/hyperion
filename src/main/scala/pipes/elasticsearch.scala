@@ -13,9 +13,13 @@ import org.apache.http.impl.nio.client.HttpAsyncClientBuilder
 import org.elasticsearch.client.RestClient
 import org.elasticsearch.client.RestClientBuilder.HttpClientConfigCallback
 import scala.util.{Try, Success, Failure}
-
+import scala.concurrent.ExecutionContext.Implicits.global
 
 package hyperion {
+
+  import com.sksamuel.elastic4s.bulk.BulkDefinition
+
+  case class ElasticInsertFailed(failed: Int)
 
   class ElasticSearchDestination(id: String, host: String, flavour: String, index: String, config: ElasticSearchConfig) extends Pipe with Tickable {
     def selfId = id
@@ -77,13 +81,11 @@ package hyperion {
 
     def flushMessages() = {
       if (messages.length > 0) {
-        val command = bulk(messages.toSeq.map((msg) => indexInto(indexTemplate.format(msg)) fields msg.nvpairs))
-        Try {
-          client.execute(command).await
-        } match {
+        val command: BulkDefinition = bulk(messages.toSeq.map((msg) => indexInto(indexTemplate.format(msg)) fields msg.nvpairs))
+        client.execute(command) onComplete {
           case Failure(e) => {
             log.error("Exception happened during inserting into ElasticSearch", e.getMessage())
-            failed += queued
+            self ! ElasticInsertFailed(queued)
           }
           case _ => {}
         }
@@ -94,7 +96,7 @@ package hyperion {
 
     def process = {
       case msg : Message => {
-        messages.append(msg)
+        messages = messages += msg
         processed += 1
         queued += 1
         if (messages.length >= 100) {
@@ -109,6 +111,10 @@ package hyperion {
           flushMessages()
         }
 
+      }
+
+      case ElasticInsertFailed(failedCount) => {
+        failed += failedCount
       }
       case StatsRequest => {
         sender ! StatsResponse(Map[String, Int]("processed" -> processed, "failed" -> failed, "queued" -> queued))
