@@ -84,7 +84,7 @@ package hyperion {
         val command: BulkDefinition = bulk(messages.toSeq.map((msg) => indexInto(indexTemplate.format(msg)) fields msg.nvpairs))
         client.execute(command) onComplete {
           case Failure(e) => {
-            log.error("Exception happened during inserting into ElasticSearch", e.getMessage())
+            log.error("Exception happened during inserting into ElasticSearch {}", e.getMessage())
             self ! ElasticInsertFailed(queued)
           }
           case _ => {}

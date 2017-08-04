@@ -112,7 +112,7 @@ package hyperion {
         connection ! Write(ByteString(template.format(data)))
       case CommandFailed(w: Write) =>
         // O/S buffer was full
-        log.error("Write failed to connection " + socketAddress)
+        log.error("Write failed to connection {}", socketAddress)
       case _: ConnectionClosed =>
         log.info("Connection closed")
         manager ! ClientDisconnected()
@@ -122,13 +122,13 @@ package hyperion {
 
     def receive = {
       case CommandFailed(connect) =>
-        log.error("Connecting failed:" + connect.failureMessage)
+        log.error("Connecting failed: {}",connect.failureMessage)
         manager ! ClientConnectFailed()
         context stop self
 
       case c @ Connected(remote, local) =>
         val connection = sender()
-        log.info("Connection estabilished to" + remote)
+        log.info("Connection estabilished to {}", remote)
         connection ! Register(self)
         manager ! ClientConnected()
         context become activeReceiving(connection)
@@ -169,7 +169,7 @@ package hyperion {
     def listening(listener: ActorRef): Receive = {
       case Connected(remote, local) =>
         val connection = sender()
-        log.info("Connection accepted from:", remote.toString())
+        log.info("Connection accepted from:{}", remote.toString())
         val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)), remote.toString().replace('/','_') )
 
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
@@ -215,7 +215,7 @@ package hyperion {
             processed_message += 1
           }
           case Failure(e) => {
-            log.error("Failed to parse message, error:'" + e.getMessage() + "' message:'" + message + "'")
+            log.error("Failed to parse message, error:'{}' message:'{}'", e.getMessage(), message)
             parsing_failure += 1
           }
         }
