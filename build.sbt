@@ -4,26 +4,19 @@ name := "Hyperion"
     
 version := "0.0.1-alpha1"
     
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.3"
 
 resolvers += "spray repo" at "http://repo.spray.io"
     
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.5.3"
-//libraryDependencies += "com.typesafe.akka" % "akka-actor_2.10" % "2.2.0"
 
-libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.12.0"
+libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.16.0"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.5.3"
 
-libraryDependencies += "io.spray" %% "spray-can" % "1.3.3"
-
-libraryDependencies += "io.spray" %% "spray-routing" % "1.3.3"
-
-libraryDependencies += "io.spray" %% "spray-json" % "1.3.2"
-
-libraryDependencies += "net.liftweb" %% "lift-json" % "2.6.2"
+libraryDependencies += "net.liftweb" %% "lift-json" % "3.1.0"
 
 libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s-core" % "5.4.5"
 
@@ -36,6 +29,10 @@ libraryDependencies += "com.gilt" %% "gfc-guava" % "0.2.5"
 libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.5"
 
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.6.4"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.0.9" 
+
+libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.9"
 
 scalaSource in Test <<= baseDirectory(_ / "test")
 
