@@ -3,6 +3,7 @@ import com.typesafe.config.ConfigFactory
 import hyperion._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import kamon.Kamon
 
 object Hyperion extends App
 {
@@ -28,7 +29,7 @@ object Hyperion extends App
         mailbox-push-timeout-time = 0s  
      }
      """)*/
-
+    //Kamon.start()
     println("Hyperion starting up")
     //val system = ActorSystem("hyperion", ConfigFactory.load(customConf))
     val system = ActorSystem("hyperion")

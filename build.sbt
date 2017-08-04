@@ -30,6 +30,12 @@ libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.5"
 
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.6.4"
 
+libraryDependencies += "io.kamon" %% "kamon-core" % "0.6.6"
+
+libraryDependencies += "io.kamon" %% "kamon-akka-2.4" % "0.6.6"
+
+libraryDependencies += "io.kamon" %% "kamon-jmx" % "0.6.6"
+
 libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.0.9" 
 
 libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.9"

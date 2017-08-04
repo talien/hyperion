@@ -8,8 +8,12 @@ import akka.io.Tcp.{Connect, CommandFailed, Write, ConnectionClosed, Connected,
     Register, ResumeAccepting, Bound, Unbind, ResumeReading, SuspendReading, Event}
 import akka.util.ByteString
 import scala.util.{Try, Success, Failure}
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 package hyperion {
+
+  import org.scalatest.time.Seconds
+
   case class ClientConnected()
 
   case class ClientConnectFailed()
@@ -153,6 +157,10 @@ package hyperion {
         sender ! StatsResponse(Map("processed" -> processed))
       }
 
+      case StatsResponse(data) => {
+        log.info(data.toString())
+      }
+
     }
 
     override def pipeShutDownhook() {
@@ -190,14 +198,23 @@ package hyperion {
   }
   case object Ack extends Event
 
-  class ReceiverActor(remote: InetSocketAddress, connection: ActorRef, parser: ActorRef, msgParser: MessageParser) extends Actor with ActorLogging {
+  class ReceiverActor(remote: InetSocketAddress, connection: ActorRef, parser: ActorRef, msgParser: MessageParser) extends Actor with ActorLogging with Tickable {
     val LF = ByteString("\n")
     var data_buffer = ByteString()
     var sent_message = 0
     var processed_message = 0
     var parsing_failure = 0
 
-    override def preStart: Unit = connection ! ResumeReading
+    override def preStart: Unit = {
+      super.preStart()
+      connection ! ResumeReading
+      startTicking(FiniteDuration(1, SECONDS),FiniteDuration(1, SECONDS))
+    }
+
+    override def postStop(): Unit = {
+      stopTicking()
+      super.postStop()
+    }
 
     def parseLines(buffer: ByteString): ByteString = {
       val endline = buffer.indexOfSlice(LF)
@@ -247,6 +264,9 @@ package hyperion {
         if (sent_message == 0) {
           connection ! ResumeReading
         }
+      case Tick => {
+        parser ! StatsResponse(Map[String, Int]("sent_message" -> sent_message, "processed" -> processed_message, "parse_failed" -> parsing_failure))
+      }
     }
 
   }
