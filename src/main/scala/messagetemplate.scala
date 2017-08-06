@@ -5,7 +5,7 @@ import com.github.nscala_time.time.Imports.{DateTime}
 import org.joda.time.format._
 import net.liftweb.json.JsonAST._
 import net.liftweb.json.Extraction._
-import net.liftweb.json.Printer._
+import net.liftweb.json.compactRender
 import scala.collection.immutable.ListMap
 
 package hyperion {
@@ -116,7 +116,7 @@ package hyperion {
     }
 
     def apply(msg: Message) : String = {
-       return compact(render(decompose(transform(msg))))
+       return compactRender(decompose(transform(msg)))
     }
   }
 

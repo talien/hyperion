@@ -6,21 +6,24 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.pattern.{ask, pipe}
 import hyperion._
-import spray.can.Http
-import spray.http._
 import akka.io.IO
 import scala.util.{Success, Failure}
-import spray.util._
-import spray.httpx._
-import MediaTypes._
-import spray.routing._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.marshalling._
+import akka.http.scaladsl.model.MediaTypes
+import akka.http.scaladsl.model.ContentType
+import spray.json.DefaultJsonProtocol._
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
-import DefaultJsonProtocol._
-import spray.routing.directives.CachingDirectives._
-import spray.httpx.SprayJsonSupport._
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
 import scala.concurrent.Future
 
 package hyperion {
+
+  import akka.http.scaladsl.marshalling.Marshaller
 
   object PipeOptionsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
     implicit val pipeOptionsFormat = jsonFormat3(PipeOptions)
@@ -50,132 +53,91 @@ package hyperion {
   }
 
   object HyperionREST {
-    def start(implicit system: ActorSystem, pipeManager: ActorRef, interface: String, port: Int, staticDirectory: String) = {
-      val myListener = system.actorOf(Props(new HyperionHttp(pipeManager, staticDirectory)), name = "hyperion-http")
-      IO(Http) ! Http.Bind(myListener, interface = interface, port = port)
-      println("REST interface initialized")
+
+    implicit val mapMarshaller: ToEntityMarshaller[Map[String, Any]] = Marshaller.opaque { map =>
+      HttpEntity(ContentType(MediaTypes.`application/json`), map.toString)
     }
-  }
-
-  class HyperionHttp(val pipeCreator: ActorRef, val staticDirectory: String) extends HttpServiceActor with ActorLogging {
-
-    def printing : Directive0 = extract (identity) flatMap {ctx => { System.out.println(ctx.toString); pass} }
 
     implicit val timeout = Timeout(FiniteDuration(1, SECONDS))
 
-    def getTail(name: String) = {
-      pipeCreator ? TailQuery(name)
+    def getTail(pipeCreator: ActorRef, name: String) : Future[List[Message]] = {
+      (pipeCreator ? TailQuery(name)).asInstanceOf[Future[List[Message]]]
     }
 
-    def getStats(name: String) = {
-      pipeCreator ? StatsQueryApi(name)
+    def getStats(pipeCreator: ActorRef, name: String) : Future[Map[String, Int]] = {
+      (pipeCreator ? StatsQueryApi(name)).asInstanceOf[Future[Map[String, Int]]]
     }
 
-    def getAllStats() = {
-      log.info("Getting all stats")
+    def getAllStats(pipeCreator: ActorRef) : Future[Map[String, Map[String, Int]]] = {
       (pipeCreator ? AllStatsQuery).asInstanceOf[Future[Map[String, Map[String, Int]]]]
     }
 
-    def receive = runRoute {
-            path("api" / "stats" / Segment) { name =>
-              get {
-                import DefaultJsonProtocol._
-                respondWithMediaType(`application/json`) {
-                  complete {
-                    val result = getStats(name).mapTo[Map[String, Int]]
-                    result
-                  }
-                }
-              }
-            } ~
-            path("api" / "stats") {
-              get {
-                import DefaultJsonProtocol._
-                respondWithMediaType(`application/json`) {
-                  complete {
-                    getAllStats()
-                  }
-                }
-              }
-            } ~
-            path("api" / "tail" / Segment) { name =>
-              get {
-                import MessageJsonProtocol._
-                respondWithMediaType(`application/json`) {
-                  complete {
-                    val result = getTail(name).mapTo[List[Message]]
-                    result
-                  }
-                }
-              }
-            } ~
-            path("api" / "shutdown") {
-              post {
-                complete {
-                  context.system.terminate()
-                  "Stopped"
-                }
+    def route(implicit system: ActorSystem, pipeCreator: ActorRef, staticDirectory: String) = {
+      path("api" / "shutdown") {
+        post {
+          complete {
+            system.terminate()
+            "OK"
+          }
 
-              }
-            } ~
-            path("api" / "create") {
-              import NodePropertyJsonProtocol._
-              post {
-                System.out.println()
-                entity(as[NodeProperty]) {
-                  node => {
-                    pipeCreator ! Create(node)
-                    println(node)
-                    complete("OK")
-                  }
-                }
-              }
-            } ~
-            path("api" / "join" / Segment / Segment) { (from, to) =>
-              (get | post) {
-                pipeCreator ! Join(from, to)
-                println(from, to)
-                complete("hello")
-              }
-            } ~
-            path("api" / "config") {
-              import ConfigJsonProtocol._
-              get {
-                respondWithMediaType(`application/json`) {
-                  complete {
-                    (pipeCreator ? QueryConfig).mapTo[Config]
-                  }
-                }
-              } ~
-              post {
-                entity(as[Config]) {
-                  hyperionConfig => {
-                    val res = pipeCreator ? UploadConfig(hyperionConfig)
-                    complete {
-                      res map { x => {
-                          x match {
-                            case Success(_) => HttpResponse(StatusCodes.OK, "OK")
-                            case Failure(e) => HttpResponse(StatusCodes.BadRequest, e.getMessage())
-                          }
-                        }
-                      }
+        }
+      } ~
+        path("api" / "stats" / Segment) { name =>
+          get {
+            import spray.json.DefaultJsonProtocol._
+            onSuccess(getStats(pipeCreator, name)) { value => complete(StatusCodes.OK -> value) }
 
-                    }
-
-                  }
-                }
-              }
-            } ~
-            pathPrefix("html") {
-              get {
-                getFromDirectory(staticDirectory)
-              }
-            } ~
-            pathSingleSlash {
-              redirect("/html/index.html", StatusCodes.PermanentRedirect)
+          }
+        } ~
+        path("api" / "stats") {
+          get {Marshaller
+            onSuccess(getAllStats(pipeCreator)) { value => complete(value) }
+          }
+        } ~
+        path("api" / "tail" / Segment) { name =>
+          get {
+            import MessageJsonProtocol._
+            onSuccess(getTail(pipeCreator, name)) { value =>
+              complete(value)
             }
+          }
+        } ~
+        path("api" / "config") {
+          import ConfigJsonProtocol._
+          get {
+            complete {
+              (pipeCreator ? QueryConfig).mapTo[Config]
+            }
+          } ~
+            post {
+              entity(as[Config]) {
+                hyperionConfig => {
+                  onComplete(pipeCreator ? UploadConfig(hyperionConfig)) {
+                    case Success(_) => complete(StatusCodes.OK -> "OK")
+                    case Failure(e) => complete(StatusCodes.BadRequest -> e.getMessage())
+                  }
+
+                }
+              }
+
+            }
+        } ~
+        pathPrefix("html") {
+          get {
+            getFromDirectory(staticDirectory)
+          }
+        } ~
+        pathSingleSlash {
+          redirect("/html/index.html", StatusCodes.PermanentRedirect)
         }
 
+    }
+
+    def start(implicit system: ActorSystem, pipeManager: ActorRef, interface: String, port: Int, staticDirectory: String) = {
+      implicit val materializer = ActorMaterializer()
+      val bindingFuture = Http().bindAndHandle(route(system, pipeManager, staticDirectory), interface, port)
+      println("REST interface initialized")
+    }
   }
 
 }
