@@ -6,9 +6,9 @@ version := "0.0.1-alpha1"
     
 scalaVersion := "2.12.3"
 
-resolvers += "spray repo" at "http://repo.spray.io"
-    
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.5.3"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.5.3"
 
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.16.0"
 

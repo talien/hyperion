@@ -1,4 +1,5 @@
 import java.net.InetSocketAddress
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import akka.actor.{Actor, ActorLogging, Stash, ActorRef, Props, Cancellable, Terminated}
@@ -21,6 +22,10 @@ package hyperion {
   case class ClientShutdownFinished(bufferedMessages: List[Message])
 
   case class ClientInitiateShutdown()
+
+  case class ServerInitiateShutdown()
+
+  case class ServerDisconnected(path: String)
 
   class TcpDestination(id: String, host: String, port: Int, template: String) extends Pipe {
     def selfId = id
@@ -166,17 +171,28 @@ package hyperion {
 
     IO(Tcp) ! Tcp.Bind(self, new InetSocketAddress("0.0.0.0", port), pullMode = true)
 
+    val connections = scala.collection.mutable.Map[String, ActorRef]()
+
     def listening(listener: ActorRef): Receive = {
       case Connected(remote, local) =>
         val connection = sender()
         log.info("Connection accepted from:{}", remote.toString())
-        val handler = context.actorOf(Props(new ReceiverActor(remote, connection, parser, msgParser)), remote.toString().replace('/','_') )
+        val path = remote.toString().replace('/','_')
+        val handler = context.actorOf(Props(new ReceiverActor(remote, self, path, connection, parser, msgParser)),  path)
+        connections.update(path, handler)
 
         sender() ! Register(handler, keepOpenOnPeerClosed = true)
         listener ! ResumeAccepting(batchSize = 1)
       case Terminate =>
         listener ! Unbind
+        for ((path,connection) <- connections) {
+          connection ! ServerInitiateShutdown()
+        }
         context.stop(self)
+
+      case ServerDisconnected(path) =>
+        log.info("Disconnected {}", path)
+        connections.remove(path)
     }
 
     def receive = {
@@ -190,7 +206,7 @@ package hyperion {
   }
   case object Ack extends Event
 
-  class ReceiverActor(remote: InetSocketAddress, connection: ActorRef, parser: ActorRef, msgParser: MessageParser) extends Actor with ActorLogging {
+  class ReceiverActor(remote: InetSocketAddress, serverActor: ActorRef, path: String, connection: ActorRef, parser: ActorRef, msgParser: MessageParser) extends Actor with ActorLogging {
     val LF = ByteString("\n")
     var data_buffer = ByteString()
     var sent_message = 0
@@ -228,6 +244,11 @@ package hyperion {
     }
 
     def receive: Receive = {
+      case ServerInitiateShutdown =>
+        log.info("Stopping because self initiated shutdown")
+        connection ! Tcp.Close
+        serverActor ! ServerDisconnected(path)
+        context.stop(self)
       case Tcp.Received(data) =>
         connection ! SuspendReading
         data_buffer ++= data
@@ -238,10 +259,12 @@ package hyperion {
         log.info("Remaining messages: {}", sent_message)
         log.info("Processed messages: {}", processed_message)
         log.info("Data buffer: {}", data_buffer)
+        serverActor ! ServerDisconnected(path)
         context.stop(self)
       case Terminated(`connection`) =>
         log.info("Stopping, because connection for remote address {} died", remote)
         context.stop(self)
+        serverActor ! ServerDisconnected(path)
       case Ack =>
         sent_message -= 1
         if (sent_message == 0) {
